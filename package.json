@@ -90,7 +90,7 @@
   },
   "scripts": {
     "convertToModules": "gulp convertToModules",
-    "start": "nodemon server.cjs",
+    "start": "node server.cjs",
     "startPublic": "node server.cjs --public",
     "build": "gulp build",
     "build-watch": "gulp build-watch",
