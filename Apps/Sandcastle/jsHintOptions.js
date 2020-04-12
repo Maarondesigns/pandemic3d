@@ -65,6 +65,5 @@ var sandcastleJsHintOptions = {
         "console",
         "Sandcastle",
         "Cesium"
-    ],
-    "esversion": 10
+    ]
 };
