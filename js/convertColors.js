@@ -1,3 +1,5 @@
+import * as Cesium from "../Source/Cesium.js";
+
 function hexToRGB(string) {
   function hexToR(h) {
     return parseInt(cutHex(h).substring(0, 2), 16);
@@ -35,12 +37,12 @@ function stringToRGBObject(string, alpha) {
   }
 }
 
-function stringToCesiumColor(string, alpha) {
+export function stringToCesiumColor(string, alpha) {
   if (typeof string !== "string") return string;
   if (string[0] === "#") {
-    let v = this.hexToRGB(string);
+    let v = hexToRGB(string);
     let { r, g, b } = v;
-    let intV = this.RGBToIntegerObject({ r, g, b });
+    let intV = RGBToIntegerObject({ r, g, b });
     if (!alpha) alpha = v.alpha ? v.alpha : 1;
     return new Cesium.Color(intV.r, intV.g, intV.b).withAlpha(alpha);
   } else if (string.includes("rgb")) {
@@ -49,7 +51,7 @@ function stringToCesiumColor(string, alpha) {
       g = +v[2],
       b = +v[3];
     if (!alpha) alpha = v[0] === "rgba" ? +v[4] : 1;
-    let intV = this.RGBToIntegerObject({ r, g, b });
+    let intV = RGBToIntegerObject({ r, g, b });
     return new Cesium.Color(intV.r, intV.g, intV.b).withAlpha(alpha);
   } else {
     return Cesium.Color[string.toUpperCase()].withAlpha(alpha);

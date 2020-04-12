@@ -1,3 +1,6 @@
+import * as Cesium from "../Source/Cesium.js";
+import { stringToCesiumColor } from "./convertColors.js";
+
 function init(token) {
   let mapProjection = new Cesium.WebMercatorProjection(Cesium.Ellipsoid.WGS84);
   let COVID19,
@@ -87,7 +90,7 @@ function init(token) {
 
   let selectedImageryProviderViewModel = naturalEarth;
 
-  viewer = new Cesium.Viewer("cesiumContainer", {
+  let viewer = new Cesium.Viewer("cesiumContainer", {
     // scene3DOnly: true,
     selectionIndicator: false,
     homeButton: true,
@@ -474,11 +477,11 @@ function init(token) {
         });
         let color = new Cesium.Color(1, 1, 1).withAlpha(0.4);
         e.polygon.material = color;
-        let { adm0_a3_us, adm0_a3_is, iso_a3 } = e.properties.getValue();
-        let id = iso_a3;
-        if (!id) id = adm0_a3_is;
-        if (!id) id = adm0_a3_us;
-        if (!id) console.log(e.properties.getValue());
+        let { adm0_a3_us, adm0_a3_is, iso_a3 } = e.properties;
+        let id = iso_a3.getValue();
+        if (!id) id = adm0_a3_is.getValue();
+        if (!id) id = adm0_a3_us.getValue();
+        if (!id) console.log(e.properties);
         let count = countryGeometries.entities.values.filter(
           (x) => x.id.split("_")[0] === id
         ).length;
@@ -503,8 +506,10 @@ function init(token) {
         countryGeometries.show = true;
         let entities = countryGeometries.entities.values;
         entities.forEach((e, ei) => {
-          let properties = e.properties.getValue();
-          let { name, adm0_a3_us, adm0_a3_is, iso_a3 } = properties;
+          let { name, adm0_a3_us, adm0_a3_is, iso_a3 } = e.properties;
+          adm0_a3_us = adm0_a3_us.getValue();
+          adm0_a3_is = adm0_a3_is.getValue();
+          iso_a3 = iso_a3.getValue();
           let cs1 = COVID19.countries[iso_a3];
           let cs2 = COVID19.countries[adm0_a3_is];
           let cs3 = COVID19.countries[adm0_a3_us];
@@ -514,10 +519,10 @@ function init(token) {
             setDescription(e, cs1);
           } else if (cs2) {
             setColor(e, cs2);
-            setDescription(e, cs1);
+            setDescription(e, cs2);
           } else if (cs3) {
             setColor(e, cs3);
-            setDescription(e, cs1);
+            setDescription(e, cs3);
           } else {
             //   console.log({ name, properties });
             setDescription(e, undefined);
@@ -743,7 +748,8 @@ function init(token) {
       Cesium.GeoJsonDataSource.load(land).then(function (dataSource) {
         let entities = dataSource.entities.values;
         entities.forEach((e) => {
-          let { FIPS } = e.properties.getValue();
+          let { FIPS } = e.properties;
+          FIPS = FIPS.getValue();
           let county = COVID19.USACounties.find((x) => +x.countyFIPS === +FIPS);
           let v = county ? +county[viewingDate] : 0;
           if (county && v) {
@@ -755,7 +761,6 @@ function init(token) {
             e.polygon.arcType = Cesium.ArcType.GEODESIC;
             e.polygon.height = undefined;
             e.disableDepthTestDistance = Number.POSITIVE_INFINITY;
-
             setColor(e, { cases: v });
             // e.polygon.material = new Cesium.Color(0.5, 0.5, 0.5).withAlpha(0.7);
             // let outlineMaterial = Cesium.Color.WHITE.withAlpha(0.5);
@@ -881,7 +886,7 @@ function init(token) {
           let offset = new Cesium.HeadingPitchRange(
             2 * Math.PI,
             -Math.PI / 4,
-            radius*2
+            radius * 2
           );
           camera.lookAt(center, offset);
           // camera.flyToBoundingSphere(bs, { offset });
@@ -1131,12 +1136,14 @@ function init(token) {
       let { position } = selectedEntity;
       if (position) position = position.getValue();
       else {
-        let { centroid } = selectedEntity.properties.getValue();
-        if (centroid)
+        let { centroid } = selectedEntity.properties;
+        if (centroid) {
+          centroid = centroid.getValue();
           position = new Cesium.Cartesian3.fromDegrees(
             centroid[0],
             centroid[1]
           );
+        }
       }
       updateElementPosition(position, "#customInfoBox");
     }
@@ -1177,9 +1184,11 @@ function init(token) {
 
     if (position) position = position.getValue();
     else {
-      let { centroid } = properties.getValue();
-      if (centroid)
+      let { centroid } = properties;
+      if (centroid) {
+        centroid = centroid.getValue();
         position = new Cesium.Cartesian3.fromDegrees(centroid[0], centroid[1]);
+      }
     }
     updateElementPosition(position, "#customInfoBox");
   }
