@@ -1,0 +1,406 @@
+html,
+body {
+  background: rgb(0, 0, 0);
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font: 16px "Roboto", sans-serif;
+}
+
+.backdrop {
+  background: rgba(27, 33, 46, 0.9);
+}
+.cesium-viewer-toolbar {
+  top: 10px;
+  z-index: 8;
+}
+.cesium-viewer-animationContainer,
+.cesium-viewer-timelineContainer,
+.cesium-viewer-bottom {
+  display: none;
+}
+#cesiumContainer {
+  position: relative;
+  width: calc(100% - 350px);
+  left: 350px;
+  height: 100%;
+}
+
+#totals {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, 0);
+  z-index: 7;
+  color: white;
+  text-align: center;
+  padding: 5px;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 10px;
+}
+#totals > div {
+  margin: 6px 0;
+}
+.total_details {
+  display: flex;
+  justify-content: center;
+}
+.total_details > div {
+  padding: 4px 6px;
+  margin: 5px;
+}
+.active {
+  box-shadow: 0 0 8px 1px #bbe1ff;
+  background-color: #81c2eba1;
+}
+.recovered {
+  box-shadow: 0 0 8px 1px #bbffbb;
+  background-color: #2cc52ca1;
+}
+.deaths {
+  box-shadow: 0 0 8px 1px #ffbbbb;
+  background-color: #c52c2ca1;
+}
+.critical {
+  box-shadow: 0 0 8px 1px #ffeebb;
+  background-color: #c5922ca1;
+}
+.subtext {
+  color: darkgray;
+  font-size: 13px;
+  margin-left: 4px;
+}
+.subtext > a {
+  color: #52acff;
+  cursor: pointer;
+}
+.subtext > a:hover {
+  font-style: italic;
+  text-decoration: underline;
+}
+#customInfoBox {
+  position: fixed;
+  transform: translate(-50%, -107%);
+  /* resize: both; */
+  /* overflow-y: auto;
+    overflow-x: hidden; */
+  color: white;
+  width: 20%;
+  min-width: 300px;
+  border: solid 1px rgba(255, 255, 255, 0.5);
+  border-radius: 6px;
+  z-index: 9;
+}
+#customInfoBox:after {
+  content: "";
+  height: 0;
+  width: 0;
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, 0px);
+  border-left: 12px solid transparent;
+  border-right: 12px solid transparent;
+  border-top: 12px solid rgba(27, 33, 46, 0.8);
+}
+
+#customInfoBox .infoBoxTitle {
+  text-align: center;
+  font-size: 18px;
+  font-weight: bold;
+  background: rgba(150, 150, 150, 0.7);
+  padding: 5px;
+}
+.infoBoxBody {
+  overflow: auto;
+}
+/* #customInfoBox  */
+.infoBoxDescription {
+  text-align: left;
+  max-height: 50vh;
+}
+
+#customInfoBox .infoBoxDescription > div {
+  margin: 10px;
+  box-shadow: 0px 1px 4px 1px rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.7);
+  padding: 4px 8px;
+  border: solid 1px rgba(255, 255, 255, 0.5);
+}
+#COVID_legend_container {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  width: 350px;
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  color: white;
+  border-right: solid 1px;
+  z-index: 9;
+}
+#COVID_legend {
+  position: relative;
+  text-align: center;
+}
+
+#COVID_legend > div {
+  border-bottom: solid 1px rgba(255, 255, 255, 0.3);
+  padding: 5px;
+}
+#COVID_leg_svg {
+  width: 90%;
+  height: 20px;
+  margin: 10px auto;
+  box-shadow: 0 0 4px 1px white;
+}
+#COVID_legend .radios > div {
+  text-align: left;
+}
+#COVID_legend .radios > div input,
+#COVID_legend .radios > div label {
+  cursor: pointer;
+}
+#COVID_legend .radios > div label:hover {
+  font-style: italic;
+}
+#COVID_legend button {
+  cursor: pointer;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+}
+#COVID_legend button:hover {
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.4);
+}
+.confirmButton {
+  background: #48b;
+  color: white;
+  border: #aef;
+}
+.confirmButton:disabled {
+  opacity: 0.8;
+  cursor: not-allowed;
+}
+.deleteButton {
+  background: red;
+  color: white;
+  border: gray;
+}
+.cancelButton {
+  background: white;
+  color: red;
+  border-color: red;
+}
+.noButton {
+  background: gray;
+  color: white;
+  border-color: white;
+}
+#COVID_legend_container .list {
+  overflow: auto;
+  /* max-height: 70vh; */
+  text-align: left;
+  padding: 0;
+}
+#COVID_legend_container .list > div {
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+  cursor: pointer;
+}
+#COVID_legend_container .list > div > div {
+  padding: 4px;
+}
+#COVID_legend_container .list > div:not(:first-child):hover,
+#COVID_legend_container .list > div:first-child > div:hover {
+  font-style: italic;
+  background: rgba(255, 255, 255, 0.1);
+}
+#COVID_legend_container .list > div > div {
+  border-bottom: solid 1px rgba(255, 255, 255, 0.3);
+}
+#COVID_legend_container .list > div > div:nth-child(odd) {
+  border-right: solid 1px rgba(255, 255, 255, 0.3);
+}
+
+#COVID_legend_container .list::-webkit-scrollbar {
+  width: 10px;
+}
+
+#COVID_legend_container .list::-webkit-scrollbar-track {
+  background-color: slategrey;
+}
+
+#COVID_legend_container .list::-webkit-scrollbar-thumb {
+  background-color: #861818;
+  outline: 1px solid slategrey;
+}
+
+/* IPAD */
+@media only screen and (max-width: 1100px) {
+  .total_details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  #totals {
+    top: unset;
+    bottom: 0;
+  }
+  #viewingDateSliderContainer {
+    bottom: 135px !important;
+  }
+}
+
+/* MOBILE */
+#legendToggle {
+  display: none;
+  position: absolute;
+  height: 40px;
+  width: 14px;
+  right: -26px;
+  top: 17vh;
+  border-top: solid 1px;
+  border-right: solid 1px;
+  border-bottom: solid 1px;
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
+}
+
+@media only screen and (max-width: 450px) {
+  body {
+    font-size: 14px;
+  }
+  #legendToggle {
+    display: block;
+  }
+  #cesiumContainer {
+    width: 100%;
+    left: 0;
+  }
+  #COVID_legend_container {
+    width: 300px;
+  }
+}
+
+@media only screen and (max-height: 450px) {
+  body {
+    font-size: 13px;
+  }
+  .infoBoxDescription {
+    font-size: 13px;
+    overflow: auto;
+  }
+  #customInfoBox .infoBoxDescription > div {
+    margin: 5px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+  }
+  #customInfoBox .infoBoxTitle {
+    font-size: 16px;
+    padding: 2px;
+  }
+  #cesiumContainer {
+    width: calc(100% - 280px);
+    left: 280px;
+  }
+  #COVID_legend_container {
+    width: 280px;
+  }
+}
+
+.slideLeft {
+  animation: slideLeft 0.5s forwards;
+}
+.slideRight {
+  animation: slideRight 0.5s forwards;
+}
+@keyframes slideLeft {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+@keyframes slideRight {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(0%);
+  }
+}
+
+#viewingDateSliderContainer {
+  width: 80%;
+  position: absolute;
+  bottom: 20px;
+  left: 10%;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  position: relative;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  /* width: 300px; */
+  height: 4px;
+  border: solid 1px slategray;
+  border-radius: 3px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 18px;
+  width: 18px;
+  border-radius: 50%;
+  background: red;
+  border: 2px solid #515151;
+  margin-top: -8px;
+  cursor: pointer;
+}
+
+.focused::-webkit-slider-thumb {
+  box-shadow: 0 0 0 5px rgba(255, 0, 0, 0.15);
+  transform: scale(1.5);
+  -webkit-transform: scale(1.5);
+}
+
+.disabled::-webkit-slider-thumb {
+  -webkit-transform: scale(0.9);
+  box-shadow: 0 0 0 3px #141414;
+  background: #515151 !important;
+  border-color: #515151 !important;
+}
+
+input[type="range"]:focus {
+  outline: none;
+}
+
+#date-popper {
+  position: absolute;
+  /* display: none; */
+  padding: 8px 10px;
+  border-radius: 4px;
+  background: white;
+  transform: translate(-50%, -175%);
+}
+#date-popper:after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  transform: translate(-38%, 0);
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 10px solid white;
+}
