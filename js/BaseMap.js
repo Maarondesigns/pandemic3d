@@ -780,7 +780,7 @@ function init(token) {
             // e["_id"] = FIPS;
             e.fips = +FIPS;
             e.name = `${county.confirmed["County Name"]}, ${county.confirmed.State}`;
-            e.description = `<div><div><strong>As of ${viewingDate}</strong></div><div>Confirmed: ${formatN(
+            e.description = `<div style="display:block;"><div style="font-weight:bold;">As of ${viewingDate}</div><div>Confirmed: ${formatN(
               conf
             )}</div><div>Deaths: ${formatN(deaths)}</div></div>`;
 
