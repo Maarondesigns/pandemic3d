@@ -250,6 +250,7 @@
     getOrUpdateData(path, uri, res, "json");
   });
   app.get("/us/counties", function (req, res) {
+      console.log("get us counties")
     let path = "data/covid_USA_counties_confirmed.csv";
     let uri =
       "https://usafactsstatic.blob.core.windows.net/public/data/covid-19/covid_confirmed_usafacts.csv";

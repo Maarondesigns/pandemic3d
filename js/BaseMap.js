@@ -9,7 +9,7 @@ function init(token) {
     mostRecentCountyData,
     oldestCountyData,
     countryGeometries,
-    dateFormat = "M/D/YYYY",
+    dateFormat,
     JHDEntities,
     USACountiesEntities,
     selectedEntity,
@@ -22,7 +22,8 @@ function init(token) {
     colorScaleLinear,
     logScale,
     colorScaleLog,
-    sortMethod = { method: "cases", direction: "dsc" };
+    sortMethod = { method: "cases", direction: "dsc" },
+    legendHidden;
 
   Cesium.Ion.defaultAccessToken = token;
 
@@ -818,10 +819,22 @@ function init(token) {
     updateMap();
   }
 
+  function setDateFormat(obj) {
+    let remove = ["countyFIPS", "County Name", "State", "stateFIPS"];
+    let s = Object.keys(obj).filter((x) => remove.indexOf(x) === -1)[0];
+    if (s) {
+      s = s.split("/");
+      let y = s[2];
+      dateFormat = `M/D/${y.length === 2 ? "YY" : "YYYY"}`;
+    }
+  }
+
   function drawLegend() {
     $("#COVID_legend_container").remove();
     $("body").append(
-      `<div id="COVID_legend_container" class="backdrop"></div>`
+      `<div id="COVID_legend_container" class="backdrop ${
+        legendHidden ? "slideLeft" : ""
+      }"></div>`
     );
     $("#COVID_legend_container").append(`<div id="COVID_legend">
         <div style="
@@ -895,6 +908,7 @@ function init(token) {
         }
         if (!viewingDate) {
           mostRecentCountyData = moment();
+          setDateFormat(COVID19.USACounties[0]);
           while (
             !COVID19.USACounties.map(
               (c) => c[mostRecentCountyData.format(dateFormat)]
@@ -1276,12 +1290,21 @@ function init(token) {
     if (leg.hasClass("slideLeft")) {
       leg.removeClass("slideLeft");
       leg.addClass("slideRight");
+      legendHidden = false;
     } else {
       leg.addClass("slideLeft");
       leg.removeClass("slideRight");
+      legendHidden = true;
     }
   }
+
+  window.addEventListener("orientationchange", function () {
+    if (Math.abs(window.orientation) === 90 && legendHidden) {
+      toggleLegend();
+    }
+  });
 }
+
 fetch("cesiumtoken").then((res) => {
   res.text().then((token) => {
     init(token);
