@@ -132,6 +132,8 @@ body {
   background: rgba(0, 0, 0, 0.7);
   padding: 4px 8px;
   border: solid 1px rgba(255, 255, 255, 0.5);
+  display: grid;
+  grid-template-columns: auto 1fr;
 }
 #COVID_legend_container {
   position: absolute;
@@ -298,8 +300,6 @@ body {
   }
   #customInfoBox .infoBoxDescription > div {
     margin: 5px;
-    display: grid;
-    grid-template-columns: auto 1fr;
   }
   #customInfoBox .infoBoxTitle {
     font-size: 16px;

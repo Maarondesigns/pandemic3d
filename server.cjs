@@ -249,11 +249,16 @@
     let uri = "https://corona.lmao.ninja/v2/jhucsse";
     getOrUpdateData(path, uri, res, "json");
   });
-  app.get("/us/counties", function (req, res) {
-      console.log("get us counties")
+  app.get("/us/counties/confirmed", function (req, res) {
     let path = "data/covid_USA_counties_confirmed.csv";
     let uri =
       "https://usafactsstatic.blob.core.windows.net/public/data/covid-19/covid_confirmed_usafacts.csv";
+    getOrUpdateData(path, uri, res, "csv");
+  });
+  app.get("/us/counties/deaths", function (req, res) {
+    let path = "data/covid_USA_counties_deaths.csv";
+    let uri =
+      "https://usafactsstatic.blob.core.windows.net/public/data/covid-19/covid_deaths_usafacts.csv";
     getOrUpdateData(path, uri, res, "csv");
   });
 
