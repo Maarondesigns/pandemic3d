@@ -1106,6 +1106,10 @@ function init(token) {
         }
         hoverEntity(e);
       });
+
+      $(`.list > #${x.id}`).on("mouseout", function () {
+        if (!selectedEntity) $("#customInfoBox").hide();
+      });
     });
   }
 
@@ -1134,7 +1138,7 @@ function init(token) {
   scene.preRender.addEventListener(function () {
     if (selectedEntity) {
       let { position } = selectedEntity;
-      if (position) position = position.getValue();
+      if (position) position = position.getValue(new Cesium.JulianDate());
       else {
         let { centroid } = selectedEntity.properties;
         if (centroid) {
@@ -1182,8 +1186,9 @@ function init(token) {
       html += `<div class='infoBoxDescription'>${description.getValue()}</div>`;
     iB.html(html);
 
-    if (position) position = position.getValue();
-    else {
+    if (position) {
+      position = position.getValue(new Cesium.JulianDate());
+    } else {
       let { centroid } = properties;
       if (centroid) {
         centroid = centroid.getValue();
