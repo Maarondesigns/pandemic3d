@@ -710,8 +710,8 @@ function init(token) {
           id: `JHD_${i}`,
           module: "JohnsHopkinsData",
           position: Cesium.Cartesian3.fromDegrees(
-            d.coordinates.longitude,
-            d.coordinates.latitude
+            +d.coordinates.longitude,
+            +d.coordinates.latitude
           ),
           name,
           description: `
