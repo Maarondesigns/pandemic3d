@@ -19,6 +19,7 @@
       description: "Port to listen on.",
     },
     public: {
+      default: process.env.HOST,
       type: "boolean",
       description: "Run a public server that listens on all interfaces.",
     },
@@ -192,7 +193,7 @@
 
   var server = app.listen(
     argv.port,
-    argv.public ? undefined : "localhost",
+    argv.public,
     function () {
       if (argv.public) {
         console.log(
