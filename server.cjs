@@ -220,7 +220,7 @@
             res.send(body);
           });
         } else {
-          res.json(error);
+          res.send(error);
         }
       });
     } else
@@ -236,12 +236,12 @@
   });
   app.get("/totals", function (req, res) {
     let path = "data/covid_totals.json";
-    let uri = "https://corona.lmao.ninja/all";
+    let uri = "https://corona.lmao.ninja/v2/all";
     getOrUpdateData(path, uri, res, "json");
   });
   app.get("/countries", function (req, res) {
     let path = "data/covid_countries.json";
-    let uri = "https://corona.lmao.ninja/countries?sort=country";
+    let uri = "https://corona.lmao.ninja/v2/countries?sort=country";
     getOrUpdateData(path, uri, res, "json");
   });
   app.get("/jhucsse", function (req, res) {
