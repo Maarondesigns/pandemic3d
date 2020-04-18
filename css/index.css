@@ -151,7 +151,12 @@ body {
   position: relative;
   text-align: center;
 }
-
+.divider {
+  width: 100%;
+  height: 0px;
+  border-bottom: solid 1px rgba(255, 255, 255, 0.3);
+  margin: 5px 0;
+}
 #COVID_legend > div {
   border-bottom: solid 1px rgba(255, 255, 255, 0.3);
   padding: 5px;
@@ -213,7 +218,7 @@ body {
 }
 #COVID_legend_container .list > div {
   display: grid;
-  grid-template-columns: 3fr 1fr;
+  grid-template-columns: 1fr 5fr 2fr;
   cursor: pointer;
 }
 #COVID_legend_container .list > div > div {
@@ -227,7 +232,7 @@ body {
 #COVID_legend_container .list > div > div {
   border-bottom: solid 1px rgba(255, 255, 255, 0.3);
 }
-#COVID_legend_container .list > div > div:nth-child(odd) {
+#COVID_legend_container .list > div > div {
   border-right: solid 1px rgba(255, 255, 255, 0.3);
 }
 
@@ -382,6 +387,39 @@ input[type="range"]::-webkit-slider-thumb {
 
 input[type="range"]:focus {
   outline: none;
+}
+
+#dateSliderPlay {
+  position: absolute;
+  left: -35px;
+  top: -8px;
+  border: solid 2px red;
+  border-radius: 50%;
+  height: 22px;
+  width: 19px;
+  padding-left: 3px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: white;
+  color: red;
+  cursor: pointer;
+}
+
+#dateSliderPlay:hover {
+  box-shadow: 0 0 5px red;
+}
+#dateSliderPlay.playing {
+  animation: shadow-pulse 1s infinite;
+}
+@keyframes shadow-pulse {
+  0% {
+    box-shadow: 0 0 0 0px rgba(255, 0, 0, 1);
+  }
+
+  100% {
+    box-shadow: 0 0 0 10px rgba(255, 0, 0, 0);
+  }
 }
 
 #date-popper {

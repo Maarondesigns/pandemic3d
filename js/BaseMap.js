@@ -5,13 +5,29 @@ function init(token) {
   let mapProjection = new Cesium.WebMercatorProjection(Cesium.Ellipsoid.WGS84);
   let COVID19,
     covType = "Countries",
+    dataSources = {},
+    pathNames = {
+      Countries: "data/world_110m.geo.json",
+      USACounties: "data/USA_counties_20m.json",
+      USAStates: "data/USA_states_20m.json",
+    },
+    heightMultiplier = 1,
+    heightMultipliers = {
+      Countries: 1000000,
+      Countries_States: 1000000,
+      USACounties: 100000,
+      USAStates: 100000,
+    },
     viewingDate,
-    mostRecentCountyData,
-    oldestCountyData,
+    dateAnimation = false,
+    dateAnimationInterval,
+    mostRecentData,
+    oldestData,
     countryGeometries,
     dateFormat,
     JHDEntities,
     USACountiesEntities,
+    USAStatesEntities,
     selectedEntity,
     colorFunction,
     scale = "log",
@@ -20,6 +36,7 @@ function init(token) {
     minCases,
     maxCases,
     colorScaleLinear,
+    linearScale,
     logScale,
     colorScaleLog,
     sortMethod = { method: "cases", direction: "dsc" },
@@ -243,66 +260,66 @@ function init(token) {
 
   let globeData = {};
 
-  d3.json("data/world_110m.geo.json").then(function (land) {
-    // land = processLand(land);
-    d3.json("data/world_50m.geo.json")
-      .then(function (land2) {
-        // land2 = processLand(land2);
-        land2.features.forEach((f) => {
-          let {
-            name,
-            adm0_a3_us,
-            adm0_a3_is,
-            iso_a3,
-            type,
-            sovereignt,
-          } = f.properties;
-          let e1 = land.features.find(
-            (x) => x.properties.adm0_a3_us === adm0_a3_us
-          );
-          let e2 = land.features.find(
-            (x) => x.properties.adm0_a3_is === adm0_a3_is
-          );
-          let e3 = land.features.find((x) => x.properties.iso_a3 === iso_a3);
+  // d3.json("data/world_110m.geo.json").then(function (land) {
+  //   // land = processLand(land);
+  //   d3.json("data/world_50m.geo.json")
+  //     .then(function (land2) {
+  //       // land2 = processLand(land2);
+  //       land2.features.forEach((f) => {
+  //         let {
+  //           name,
+  //           adm0_a3_us,
+  //           adm0_a3_is,
+  //           iso_a3,
+  //           type,
+  //           sovereignt,
+  //         } = f.properties;
+  //         let e1 = land.features.find(
+  //           (x) => x.properties.adm0_a3_us === adm0_a3_us
+  //         );
+  //         let e2 = land.features.find(
+  //           (x) => x.properties.adm0_a3_is === adm0_a3_is
+  //         );
+  //         let e3 = land.features.find((x) => x.properties.iso_a3 === iso_a3);
 
-          // if (e1) console.log("adm0_a3_us: ", e1);
-          // if (e2) console.log("adm0_a3_is: ", e2);
-          // if (e3) console.log("iso_a3: ", e3);
+  //         // if (e1) console.log("adm0_a3_us: ", e1);
+  //         // if (e2) console.log("adm0_a3_is: ", e2);
+  //         // if (e3) console.log("iso_a3: ", e3);
 
-          if (!e1 && !e2 && !e3) {
-            land.features.push(f);
-          }
-        });
-        findCentroids(land);
-        globeData.land = land;
-        // //these are the geometries in 10m resolution missing from others
-        // //loading entire highres file is too big: 21Mb
-        // //missing list will be updated with more geometries saved from bing
-        // let missing = ["UMI", "TUV", "GIB"];
-        // return Promise.all(
-        //     missing.map(x =>
-        //         fetch(
-        //             `data/world_10m/${x}.geo.json`
-        //         ).then(res => {
-        //             return res.json().then(data => {
-        //                 return data;
-        //             });
-        //         })
-        //     )
-        // ).then(data => {
-        //     data.forEach(f => {
-        //         land.features.push(f);
-        //     });
-        //     that.findCentroids(land);
-        //     globeData.land = land;
-        //     // globeData.mediumDef = land2;
+  //         if (!e1 && !e2 && !e3) {
+  //           land.features.push(f);
+  //         }
+  //       });
+  //       findCentroids(land);
+  //       globeData.land = land;
+  //       // //these are the geometries in 10m resolution missing from others
+  //       // //loading entire highres file is too big: 21Mb
+  //       // //missing list will be updated with more geometries saved from bing
+  //       // let missing = ["UMI", "TUV", "GIB"];
+  //       // return Promise.all(
+  //       //     missing.map(x =>
+  //       //         fetch(
+  //       //             `data/world_10m/${x}.geo.json`
+  //       //         ).then(res => {
+  //       //             return res.json().then(data => {
+  //       //                 return data;
+  //       //             });
+  //       //         })
+  //       //     )
+  //       // ).then(data => {
+  //       //     data.forEach(f => {
+  //       //         land.features.push(f);
+  //       //     });
+  //       //     that.findCentroids(land);
+  //       //     globeData.land = land;
+  //       //     // globeData.mediumDef = land2;
 
-        // });
-      })
-      .then(() => {
-        initCOVID19();
-      });
-  });
+  //       // });
+  //     })
+  //     .then(() => {
+  initCOVID19();
+  // });
+  // });
 
   function findCentroids(featureCollection) {
     let projection = d3.geoMercator().rotate([0, 0]);
@@ -375,17 +392,11 @@ function init(token) {
                   let id = d.countryInfo.iso3;
                   if (id) COVID19.countries[id] = d;
                 });
-                console.log({ COVID19, countries });
-                // allCases = Object.keys(COVID19.countries).map(
-                //   (k) => COVID19.countries[k].cases
-                // );
-                // minCases = Math.min(...allCases);
-                // maxCases = Math.max(...allCases);
-                // setScales();
                 initTotals();
-                initMap();
                 initUSAData();
-                drawLegend();
+                updateMap().then(() => {
+                  drawLegend();
+                });
                 if (window.innerWidth < 450) {
                   setTimeout(() => {
                     toggleLegend();
@@ -461,23 +472,71 @@ function init(token) {
     // t.append(`<div class="subtext">Updated ${moment(updated).fromNow()}</div>`);
   }
 
-  function initMap() {
-    countryGeometries = new Cesium.CustomDataSource("countryGeometries");
-    viewer.dataSources.add(countryGeometries);
-    Cesium.GeoJsonDataSource.load(globeData.land).then(function (dataSource) {
+  // function initMap() {
+  //   countryGeometries = new Cesium.CustomDataSource("countryGeometries");
+  //   viewer.dataSources.add(countryGeometries);
+  //   Cesium.GeoJsonDataSource.load(globeData.land).then(function (dataSource) {
+  //     let entities = dataSource.entities.values;
+  //     entities.forEach((e, ei) => {
+  //       e.polygon.arcType = Cesium.ArcType.GEODESIC;
+  //       e.polygon.height = undefined;
+  //       e.disableDepthTestDistance = Number.POSITIVE_INFINITY;
+  //       // e.name = country.Name;
+  //       // e.description = new Cesium.CallbackProperty(
+  //       //     function() {
+  //       //         return that.countryTooltipText(
+  //       //             country.CountryCode
+  //       //         );
+  //       //     }
+  //       // );
+  //       let outlineMaterial = Cesium.Color.WHITE.withAlpha(0.5);
+  //       e.polygon.outline = false;
+  //       e.polyline = new Cesium.PolylineGraphics({
+  //         positions: e.polygon.hierarchy._value.positions,
+  //         material: outlineMaterial,
+  //         width: 1,
+  //         eyeOffset: new Cesium.Cartesian3(0, 0, -6000),
+  //       });
+  //       let color = new Cesium.Color(1, 1, 1).withAlpha(0.4);
+  //       e.polygon.material = color;
+  //       let { adm0_a3_us, adm0_a3_is, iso_a3 } = e.properties;
+  //       let id = iso_a3.getValue();
+  //       if (!id) id = adm0_a3_is.getValue();
+  //       if (!id) id = adm0_a3_us.getValue();
+  //       if (!id) console.log(e.properties);
+  //       let count = countryGeometries.entities.values.filter(
+  //         (x) => x.id.split("_")[0] === id
+  //       ).length;
+  //       e["_id"] = `${id}_${count}`;
+  //       countryGeometries.entities.add(e);
+  //     });
+  //     updateMap();
+  //   });
+  // }
+
+  function drawEntities() {
+    let land = globeData[covType];
+    let path = pathNames[covType];
+    if (land) {
+      loadEntities(land);
+    } else {
+      d3.json(path).then((land) => {
+        globeData[covType] = land;
+        findCentroids(land);
+        loadEntities(land);
+      });
+    }
+  }
+
+  function loadEntities(land) {
+    dataSources[covType] = new Cesium.CustomDataSource(covType);
+    viewer.dataSources.add(dataSources[covType]);
+    Cesium.GeoJsonDataSource.load(land).then(function (dataSource) {
       let entities = dataSource.entities.values;
       entities.forEach((e, ei) => {
         e.polygon.arcType = Cesium.ArcType.GEODESIC;
         e.polygon.height = undefined;
         e.disableDepthTestDistance = Number.POSITIVE_INFINITY;
-        // e.name = country.Name;
-        // e.description = new Cesium.CallbackProperty(
-        //     function() {
-        //         return that.countryTooltipText(
-        //             country.CountryCode
-        //         );
-        //     }
-        // );
         let outlineMaterial = Cesium.Color.WHITE.withAlpha(0.5);
         e.polygon.outline = false;
         e.polyline = new Cesium.PolylineGraphics({
@@ -486,104 +545,197 @@ function init(token) {
           width: 1,
           eyeOffset: new Cesium.Cartesian3(0, 0, -6000),
         });
-        let color = new Cesium.Color(1, 1, 1).withAlpha(0.4);
-        e.polygon.material = color;
+        let id = generateID(e);
+        let data = getData(id);
+        setColor(e, data);
+        setDescription(e, data);
+        let count = dataSources[covType].entities.values.filter(
+          (x) => x.id.split("_")[0] == id
+        ).length;
+        id = `${id}_${count}`;
+        e["_id"] = id;
+        dataSources[covType].entities.add(e);
+      });
+    });
+  }
+
+  function getData(id) {
+    switch (covType) {
+      case "Countries":
+        return COVID19.countries[id];
+      case "USACounties":
+        let county = COVID19.USACounties.find(
+          (x) => +x.confirmed.countyFIPS === id
+        );
+        if (county) {
+          let obj = JSON.parse(JSON.stringify(county));
+          obj.cases = +county.confirmed[viewingDate];
+          obj.deaths = +county.deaths[viewingDate];
+          return obj;
+        }
+        break;
+      case "USAStates":
+        let states = {};
+        COVID19.USACounties.forEach((c) => {
+          let cases = c.confirmed ? +c.confirmed[viewingDate] : 0;
+          let deaths = c.deaths ? +c.deaths[viewingDate] : 0;
+          let sFIPS = c.confirmed.stateFIPS;
+          if (sFIPS.length === 1) sFIPS = `0${sFIPS}`;
+          let s = states[sFIPS];
+          if (s) {
+            states[sFIPS].cases += cases;
+            states[sFIPS].deaths += deaths;
+          } else states[sFIPS] = { cases, deaths };
+        });
+        return states[id];
+    }
+  }
+
+  function generateID(e) {
+    switch (covType) {
+      case "Countries":
         let { adm0_a3_us, adm0_a3_is, iso_a3 } = e.properties;
         let id = iso_a3.getValue();
         if (!id) id = adm0_a3_is.getValue();
         if (!id) id = adm0_a3_us.getValue();
         if (!id) console.log(e.properties);
-        let count = countryGeometries.entities.values.filter(
-          (x) => x.id.split("_")[0] === id
-        ).length;
-        e["_id"] = `${id}_${count}`;
-        countryGeometries.entities.add(e);
-      });
-      updateMap();
-    });
+        return id;
+      case "USACounties":
+        let { FIPS } = e.properties;
+        FIPS = FIPS.getValue();
+        return +FIPS;
+      case "USAStates":
+        let { STATE } = e.properties;
+        STATE = STATE.getValue();
+        return STATE;
+    }
   }
 
-  function updateMap() {
-    switch (covType) {
-      case "Countries":
-        allCases = Object.keys(COVID19.countries).map(
-          (k) => COVID19.countries[k].cases
-        );
-        minCases = Math.min(...allCases);
-        maxCases = Math.max(...allCases);
-        setScales();
-        if (JHDEntities) JHDEntities.show = false;
-        if (USACountiesEntities) USACountiesEntities.show = false;
-        countryGeometries.show = true;
-        let entities = countryGeometries.entities.values;
-        entities.forEach((e, ei) => {
-          let { name, adm0_a3_us, adm0_a3_is, iso_a3 } = e.properties;
-          adm0_a3_us = adm0_a3_us.getValue();
-          adm0_a3_is = adm0_a3_is.getValue();
-          iso_a3 = iso_a3.getValue();
-          let cs1 = COVID19.countries[iso_a3];
-          let cs2 = COVID19.countries[adm0_a3_is];
-          let cs3 = COVID19.countries[adm0_a3_us];
-          // console.log({ name, cs1, cs2, cs3 });
-          if (cs1) {
-            setColor(e, cs1);
-            setDescription(e, cs1);
-          } else if (cs2) {
-            setColor(e, cs2);
-            setDescription(e, cs2);
-          } else if (cs3) {
-            setColor(e, cs3);
-            setDescription(e, cs3);
-          } else {
-            //   console.log({ name, properties });
-            setDescription(e, undefined);
-          }
-        });
-        $("#viewingDateSliderContainer").remove();
-        break;
-      case "Countries_States":
-        countryGeometries.show = false;
-        if (USACountiesEntities) USACountiesEntities.show = false;
-        $("#viewingDateSliderContainer").remove();
-        drawJHD();
-        break;
-      case "USACounties":
-        if (viewingDate === mostRecentCountyData.format(dateFormat)) {
-          allCases = COVID19.USACounties.map((c) => +c.confirmed[viewingDate]);
+  function updateMap(dontDrawSlider) {
+    return new Promise((res) => {
+      Object.keys(dataSources).forEach((k) => {
+        let ds = dataSources[k];
+        ds.entities.removeAll();
+        viewer.dataSources.remove(ds);
+        ds = undefined;
+      });
+      switch (covType) {
+        case "Countries":
+          allCases = Object.keys(COVID19.countries).map(
+            (k) => COVID19.countries[k].cases
+          );
           minCases = Math.min(...allCases);
           maxCases = Math.max(...allCases);
           setScales();
-        }
-        countryGeometries.show = false;
-        if (JHDEntities) JHDEntities.show = false;
-        drawUSACounties();
-        let slider = $("#viewingDateSliderContainer");
-        if (!slider[0]) drawUSACountySlider();
-        break;
-    }
+          drawEntities();
+          $("#viewingDateSliderContainer").remove();
+          break;
+        case "Countries_States":
+          $("#viewingDateSliderContainer").remove();
+          drawJHD();
+          break;
+        case "USACounties":
+          if (viewingDate === mostRecentData.format(dateFormat)) {
+            allCases = COVID19.USACounties.map(
+              (c) => +c.confirmed[viewingDate]
+            );
+            minCases = Math.min(...allCases);
+            maxCases = Math.max(...allCases);
+            setScales();
+          }
+          drawEntities();
+          // drawUSACounties();
+          if (!dontDrawSlider) drawDateSlider();
+          break;
+        case "USAStates":
+          if (viewingDate === mostRecentData.format(dateFormat)) {
+            let states = {};
+            COVID19.USACounties.forEach((c) => {
+              let v = +c.confirmed[viewingDate];
+              if (states[c.confirmed.State]) states[c.confirmed.State] += v;
+              else states[c.confirmed.State] = v;
+            });
+            COVID19.USACounties.map((c) => +c.confirmed[viewingDate]);
+            allCases = Object.keys(states).map((k) => states[k]);
+            minCases = Math.min(...allCases);
+            maxCases = Math.max(...allCases);
+            setScales();
+          }
+          drawEntities();
+          // drawUSAStates();
+          if (!dontDrawSlider) drawDateSlider();
+          break;
+      }
+      res();
+    });
   }
 
-  function drawUSACountySlider() {
-    let array = [oldestCountyData.format(dateFormat)];
-    let current = oldestCountyData.clone();
-    while (!current.isAfter(mostRecentCountyData, "day")) {
+  function startDateAnimation() {
+    function nextDay() {
+      let d = moment(viewingDate, dateFormat).add(1, "day");
+      if (d.isAfter(mostRecentData)) d = oldestData;
+      viewingDate = d.format(dateFormat);
+      updateMap().then(() => {
+        drawLegend();
+      });
+    }
+    dateAnimationInterval = setInterval(
+      () => {
+        nextDay();
+      },
+      covType === "USAStates" ? 2500 : 6000
+    );
+    nextDay();
+  }
+
+  function stopDateAnimation() {
+    clearInterval(dateAnimationInterval);
+  }
+
+  function drawDateSlider() {
+    let array = [oldestData.format(dateFormat)];
+    let current = oldestData.clone();
+    while (!current.isAfter(mostRecentData, "day")) {
       array.push(current.format(dateFormat));
       current.add(1, "day");
     }
-    // $("#viewingDateSliderContainer").remove();
+    $("#viewingDateSliderContainer").remove();
     $("#cesiumContainer").append(
-      `<div id="viewingDateSliderContainer"><div id="date-popper"></div><input style="width:100%;" type="range" id="viewingDateSlider" name="viewingDateSlider" min="0" max="${
+      `<div id="viewingDateSliderContainer">
+      <div id="date-popper"></div>
+      <div id="dateSliderPlay" style="${
+        dateAnimation
+          ? "padding-left:0px;width:22px"
+          : "padding-left:3px;width:19px"
+      }" ${dateAnimation ? `class="playing"` : ""}>${
+        dateAnimation
+          ? `<i class="fa fa-pause"></i>`
+          : `<i class="fa fa-play"></i>`
+      }</div>
+      <input style="width:100%;" type="range" id="viewingDateSlider" name="viewingDateSlider" min="0" max="${
         array.length - 1
-      }" value="${array.findIndex((x) => x === viewingDate)}"></div>`
+      }" value="${array.findIndex((x) => x === viewingDate)}">
+      </div>`
     );
 
-    // $("#viewingDateSliderContainer").on("blur", function (e) {
-    //   $("#viewingDateSlider").removeClass("focused");
-    // });
+    $("#dateSliderPlay").click(function () {
+      let el = $(this);
+      if (dateAnimation) {
+        el.removeClass("playing");
+        el.html(`<i class="fa fa-play"></i>`);
+        el.css({ paddingLeft: "3px", width: "19px" });
+        stopDateAnimation();
+      } else {
+        el.addClass("playing");
+        el.html(`<i class="fa fa-pause"></i>`);
+        el.css({ paddingLeft: "0px", width: "22px" });
+        startDateAnimation();
+      }
+      dateAnimation = !dateAnimation;
+    });
+
     let slider = $("#viewingDateSlider");
-    // $("#viewingDateSliderContainer").on("focus", function (e) {
-    //   slider.addClass("focused");
-    // });
+
     let percent = slider.val() / array.length;
     let plus = 9;
     if (window.innerWidth < 1100) plus = 9 - percent * 9;
@@ -607,53 +759,69 @@ function init(token) {
       $(this).removeClass("focused");
       let d = array[this.value];
       viewingDate = d;
-      drawLegend();
-      updateMap();
+      updateMap(true).then(() => {
+        drawLegend();
+      });
     });
   }
 
   function setDescription(e, covid) {
     if (covid) {
-      let {
-        cases,
-        deaths,
-        active,
-        recovered,
-        critical,
-        todayCases,
-        todayDeaths,
-        casesPerOneMillion,
-        deathsPerOneMillion,
-        tests,
-        testsPerOneMillion,
-      } = covid;
-      let mob = Math.min(window.innerWidth, window.innerHeight) < 450;
-      e.description = `
-        <div>
-            <div style="font-weight:bold;text-decoration:underline;">Total</div>
-            <div style="margin-left:10px;">
-                <div>Cases: ${formatN(cases)} (${formatN(
-        casesPerOneMillion
-      )} per ${mob ? "M" : "million"})</div>
-                <div>Deaths: ${formatN(deaths)} (${formatN(
-        deathsPerOneMillion
-      )} per ${mob ? "M" : "million"})</div>
-                <div>Active: ${formatN(active)}</div>
-                <div>Recovered: ${formatN(recovered)}</div>
-                <div>Critical: ${formatN(critical)}</div>
-                <div>Tests: ${formatN(tests)} (${formatN(
-        testsPerOneMillion
-      )} per ${mob ? "M" : "million"})</div>
+      switch (covType) {
+        case "Countries":
+          let {
+            cases,
+            deaths,
+            active,
+            recovered,
+            critical,
+            todayCases,
+            todayDeaths,
+            casesPerOneMillion,
+            deathsPerOneMillion,
+            tests,
+            testsPerOneMillion,
+          } = covid;
+          let mob = Math.min(window.innerWidth, window.innerHeight) < 450;
+          e.description = `
+            <div>
+                <div style="font-weight:bold;text-decoration:underline;">Total</div>
+                <div style="margin-left:10px;">
+                    <div>Cases: ${formatN(cases)} (${formatN(
+            casesPerOneMillion
+          )} per ${mob ? "M" : "million"})</div>
+                    <div>Deaths: ${formatN(deaths)} (${formatN(
+            deathsPerOneMillion
+          )} per ${mob ? "M" : "million"})</div>
+                    <div>Active: ${formatN(active)}</div>
+                    <div>Recovered: ${formatN(recovered)}</div>
+                    <div>Critical: ${formatN(critical)}</div>
+                    <div>Tests: ${formatN(tests)} (${formatN(
+            testsPerOneMillion
+          )} per ${mob ? "M" : "million"})</div>
+                </div>
             </div>
-        </div>
-        <div>
-            <div style="font-weight:bold;text-decoration:underline;">Today</div>
-            <div style="margin-left:10px;">
-                <div>Cases: ${formatN(todayCases)}</div>
-                <div>Deaths: ${formatN(todayDeaths)}</div>
+            <div>
+                <div style="font-weight:bold;text-decoration:underline;">Today</div>
+                <div style="margin-left:10px;">
+                    <div>Cases: ${formatN(todayCases)}</div>
+                    <div>Deaths: ${formatN(todayDeaths)}</div>
+                </div>
             </div>
-        </div>
-        `;
+            `;
+          break;
+        case "USACounties":
+          e.name = `${covid.confirmed["County Name"]}, ${covid.confirmed.State}`;
+          e.description = `<div style="display:block;"><div style="font-weight:bold;">As of ${viewingDate}</div><div>Confirmed: ${formatN(
+            covid.cases
+          )}</div><div>Deaths: ${formatN(covid.deaths)}</div></div>`;
+          break;
+        case "USAStates":
+          e.description = `<div style="display:block;"><div style="font-weight:bold;">As of ${viewingDate}</div><div>Confirmed: ${formatN(
+            covid.cases
+          )}</div><div>Deaths: ${formatN(covid.deaths)}</div></div>`;
+          break;
+      }
     } else e.description = `<div>No Data</div>`;
   }
 
@@ -746,6 +914,50 @@ function init(token) {
     }
   }
 
+  function drawUSAStates() {
+    if (USAStatesEntities) {
+      USAStatesEntities.entities.removeAll();
+      viewer.dataSources.remove(USAStatesEntities);
+      USAStatesEntities = undefined;
+    }
+    if (globeData.USAStates) {
+      loadEntities(globeData.USAStates);
+    } else {
+      d3.json("data/USA_states_20m.json").then((land) => {
+        globeData.USAStates = land;
+        findCentroids(land);
+        loadEntities(land);
+      });
+    }
+
+    function loadEntities(land) {
+      USAStatesEntities = new Cesium.CustomDataSource("USACountiesEntities");
+      viewer.dataSources.add(USAStatesEntities);
+      Cesium.GeoJsonDataSource.load(land).then(function (dataSource) {
+        let entities = dataSource.entities.values;
+        entities.forEach((e) => {
+          e.polygon.arcType = Cesium.ArcType.GEODESIC;
+          e.polygon.height = undefined;
+          e.disableDepthTestDistance = Number.POSITIVE_INFINITY;
+          e.polygon.material = new Cesium.Color(
+            Math.random(),
+            Math.random(),
+            Math.random()
+          );
+          let outlineMaterial = Cesium.Color.WHITE.withAlpha(0.3);
+          e.polygon.outline = false;
+          e.polyline = new Cesium.PolylineGraphics({
+            positions: e.polygon.hierarchy._value.positions,
+            material: outlineMaterial,
+            width: 1,
+            eyeOffset: new Cesium.Cartesian3(0, 0, -6000),
+          });
+          USAStatesEntities.entities.add(e);
+        });
+      });
+    }
+  }
+
   function drawUSACounties() {
     if (USACountiesEntities) {
       USACountiesEntities.entities.removeAll();
@@ -756,7 +968,7 @@ function init(token) {
     if (globeData.USACounties) {
       loadEntities(globeData.USACounties);
     } else {
-      d3.json("data/gz_2010_us_050_00_20m.json").then((land) => {
+      d3.json("data/USA_counties_20m.json").then((land) => {
         globeData.USACounties = land;
         findCentroids(land);
         loadEntities(land);
@@ -817,20 +1029,22 @@ function init(token) {
         e.polygon.material = material;
         let h = 0;
         if (extrudeHeights) {
-          h = c * 5;
+          let multi = heightMultipliers[covType] * heightMultiplier;
+          h = linearScale(c) * multi;
           if (scale === "log" && logScale) {
-            let multi = covType === "USACounties" ? 100000 : 1000000;
             h = logScale(c) * multi;
           }
         }
         e.polygon.extrudedHeight = Math.round(h);
       }
     } else if (e.polygon) {
-      e.polygon.material = new Cesium.Color(0.5, 0.5, 0.5).withAlpha(0.7);
+      e.polygon.material = new Cesium.Color(0.5, 0.5, 0.5).withAlpha(0.4);
     }
   }
 
   function setScales() {
+    linearScale = d3.scaleSequential().domain([1, maxCases]);
+
     colorScaleLinear = d3
       .scaleSequential(d3.interpolateReds)
       .domain([1, maxCases]);
@@ -843,8 +1057,9 @@ function init(token) {
   function changeScale(s) {
     scale = s;
     colorFunction = scale === "log" ? colorScaleLog : colorScaleLinear;
-    drawLegend();
-    updateMap();
+    updateMap().then(() => {
+      drawLegend();
+    });
   }
 
   function setDateFormat(obj) {
@@ -890,13 +1105,26 @@ function init(token) {
           covType === "Countries_States" ? "checked" : ""
         }>
         <label for="Countries_States">Countries/States circles</label><span class="subtext">[<a target="_blank" href="https://systems.jhu.edu/research/public-health/ncov/" title="https://systems.jhu.edu/research/public-health/ncov/">Johns Hopkins</a>]</span>
-        <div style="padding: 6px 45px 4px 25px;"><span style="margin-left:0;" class="subtext">This site uses the <a target="_blank" href="https://github.com/NovelCOVID/API" title="https://github.com/NovelCOVID/API">NovelCOVID API</a>. You can see a list of COVID related API's <a target="_blank" href="https://covid-19-apis.postman.com/" title="https://covid-19-apis.postman.com/">here</a>.<span class="subtext"></div>
+        <div style="padding: 6px 45px 4px 25px;"><span style="margin-left:0;" class="subtext">Above resources use the <a target="_blank" href="https://github.com/NovelCOVID/API" title="https://github.com/NovelCOVID/API">NovelCOVID API</a>. You can see a list of COVID related API's <a target="_blank" href="https://covid-19-apis.postman.com/" title="https://covid-19-apis.postman.com/">here</a>.<span class="subtext"></div>
         </div>
+        <div class="divider"></div>
         <div>
         <input type="radio" id="USACounties" name="cov_type" value="USACounties" ${
           covType === "USACounties" ? "checked" : ""
         }>
-        <label for="USACounties">USA Counties</label><span class="subtext">[<a target="_blank" href="https://usafacts.org/visualizations/coronavirus-covid-19-spread-map/" title="https://usafacts.org/visualizations/coronavirus-covid-19-spread-map/">USA Facts</a>]</span>
+        <label for="USACounties">USA Counties</label>
+        <span class="subtext">
+        [<a target="_blank" href="https://usafacts.org/visualizations/coronavirus-covid-19-spread-map/" title="https://usafacts.org/visualizations/coronavirus-covid-19-spread-map/">USA Facts</a>]
+        </span>
+        </div>
+        <div>
+        <input type="radio" id="USAStates" name="cov_type" value="USAStates" ${
+          covType === "USAStates" ? "checked" : ""
+        }>
+        <label for="USAStates">USA States</label>
+        <span class="subtext">
+        [Combined Counties]
+        </span>
         </div>
         </div>
         <div class="radios">
@@ -905,6 +1133,9 @@ function init(token) {
           extrudeHeights ? "checked" : ""
         }>
         <label for="extrudeHeights">3D</label>
+        <input style="display:${
+          extrudeHeights ? "" : "none"
+        };width: 80%;margin-left: 6px;" type="range" id="heightSlider" name="heightSlider" min="0.1" max="4" step="0.1" value="${heightMultiplier}"/>
         </div>
         </div>
         </div>`);
@@ -915,12 +1146,19 @@ function init(token) {
 
     $("#extrudeHeights").change(function () {
       extrudeHeights = this.checked;
-      updateMap();
+      updateMap(true).then(() => {
+        drawLegend();
+      });
+    });
+    $("#heightSlider").on("change", function () {
+      heightMultiplier = this.value;
+      updateMap(true);
     });
 
     $("input[type=radio][name=cov_type]").change(function () {
       covType = this.value;
-      if (covType === "USACounties") {
+      stopDateAnimation();
+      if (covType === "USACounties" || covType === "USAStates") {
         if (scene.mode === Cesium.SceneMode.COLUMBUS_VIEW) {
           let bs = Cesium.BoundingSphere.fromRectangle3D(USARect);
           let { center, radius } = bs;
@@ -935,39 +1173,41 @@ function init(token) {
           camera.flyTo({ destination: USARect });
         }
         if (!viewingDate) {
-          mostRecentCountyData = moment();
+          mostRecentData = moment();
           setDateFormat(COVID19.USACounties[0].confirmed);
           while (
             !COVID19.USACounties.map(
-              (c) => c.confirmed[mostRecentCountyData.format(dateFormat)]
+              (c) => c.confirmed[mostRecentData.format(dateFormat)]
             ).filter((x) => x).length &&
-            mostRecentCountyData.isAfter(moment().startOf("year"))
+            mostRecentData.isAfter(moment().startOf("year"))
           ) {
-            mostRecentCountyData.subtract(1, "day");
+            mostRecentData.subtract(1, "day");
           }
-          viewingDate = mostRecentCountyData.format(dateFormat);
-          oldestCountyData = mostRecentCountyData.clone();
+          viewingDate = mostRecentData.format(dateFormat);
+          oldestData = mostRecentData.clone();
           while (
             COVID19.USACounties.map(
-              (c) => c.confirmed[oldestCountyData.format(dateFormat)]
+              (c) => c.confirmed[oldestData.format(dateFormat)]
             ).filter((x) => x).length
           ) {
-            oldestCountyData.subtract(1, "day");
+            oldestData.subtract(1, "day");
           }
-          oldestCountyData.add(1, "day");
+          oldestData.add(1, "day");
         }
       } else {
         camera.flyHome();
       }
       // if (!JHD && this.value === "Countries_States") JHD = true;
       // else if (JHD && this.value === "Countries") JHD = false;
-      drawLegend();
-      updateMap();
+      updateMap().then(() => {
+        drawLegend();
+      });
     });
     $("input[type=radio][name=usa_counties]").change(function () {
       USACounties = true;
-      drawLegend();
-      updateMap();
+      updateMap().then(() => {
+        drawLegend();
+      });
     });
 
     colorFunction = scale === "log" ? colorScaleLog : colorScaleLinear;
@@ -990,15 +1230,17 @@ function init(token) {
     $("#covid_logarithmic").click(function () {
       if (scale !== "log") {
         scale = "log";
-        drawLegend();
-        updateMap();
+        updateMap().then(() => {
+          drawLegend();
+        });
       }
     });
     $("#covid_linear").click(function () {
       if (scale !== "linear") {
         scale = "linear";
-        drawLegend();
-        updateMap();
+        updateMap().then(() => {
+          drawLegend();
+        });
       }
     });
 
@@ -1034,13 +1276,13 @@ function init(token) {
     $("#COVID_legend_container").append(`<div class="list"></div>`);
     let arrow = sortMethod.direction === "dsc" ? "↓" : "↑";
     $(`.list`).append(`
-  <div style="background:rgba(255,255,255,0.2); border-bottom:solid 1px; font-weight:bold;"><div id="sortAlpha">${
-    covType
-    // JHD ? "Countries/States" : "Countries"
-  } ${sortMethod.method === "alpha" ? arrow : ""}</div>
-  <div id="sortCases">Cases ${
-    sortMethod.method === "cases" ? arrow : ""
-  }</div></div>
+  <div style="background:rgba(255,255,255,0.2); border-bottom:solid 1px; font-weight:bold;">
+  <div></div>
+  <div id="sortAlpha">${covType} ${
+      sortMethod.method === "alpha" ? arrow : ""
+    }</div>
+  <div id="sortCases">Cases ${sortMethod.method === "cases" ? arrow : ""}</div>
+  </div>
   `);
     $("#sortAlpha").click(function () {
       let direction = "asc";
@@ -1086,6 +1328,21 @@ function init(token) {
             value: conf[viewingDate],
           };
         });
+        break;
+      case "USAStates":
+        list = [];
+        COVID19.USACounties.forEach((c) => {
+          let cases = c.confirmed ? +c.confirmed[viewingDate] : 0;
+          // let deaths = c.deaths ? +c.deaths[viewingDate] : 0;
+          let sFIPS = c.confirmed.stateFIPS;
+          if (sFIPS.length === 1) sFIPS = `0${sFIPS}`;
+          let s = list.find((x) => x.id === sFIPS);
+          if (s) {
+            s.value += cases;
+          } else
+            list.push({ id: sFIPS, name: c.confirmed.State, value: cases });
+        });
+        break;
     }
     // let list = JHD
     //   ? COVID19.JohnsHopkinsData.map((x, i) => {
@@ -1108,45 +1365,35 @@ function init(token) {
         return direction === "asc" ? a.value - b.value : b.value - a.value;
       }
     });
-    list.forEach((x) => {
+    list.forEach((x, i) => {
       $(`.list`).append(
-        `<div id=${x.id}><div>${x.name}</div><div>${x.value}</div></div>`
+        `<div id=${x.id}><div>${i + 1}</div><div>${x.name}</div><div>${
+          x.value
+        }</div></div>`
       );
       $(`.list > #${x.id}`).click(function () {
-        let e;
-        switch (covType) {
-          case "Countries":
-            e = countryGeometries.entities.values.filter((e) => {
-              return e.id.split("_")[0] === x.id;
-            });
-            break;
-          case "Countries_States":
-            e = JHDEntities.entities.values.find((e) => e.id === x.id);
-            break;
-          case "USACounties":
-            e = USACountiesEntities.entities.values.find(
-              (e) => +e.fips === +x.id
-            );
-            break;
+        let e,
+          ds = dataSources[covType];
+        if (!ds) return;
+        if (covType === "Countries_States") {
+          e = ds.entities.values.find((e) => e.id === x.id);
+        } else {
+          e = ds.entities.values.filter((e) => {
+            return e.id.split("_")[0] === x.id;
+          });
         }
         selectEntity(e);
       });
       $(`.list > #${x.id}`).on("mouseover", function () {
-        let e;
-        switch (covType) {
-          case "Countries":
-            e = countryGeometries.entities.values.filter((e) => {
-              return e.id.split("_")[0] === x.id;
-            });
-            break;
-          case "Countries_States":
-            e = JHDEntities.entities.values.find((e) => e.id === x.id);
-            break;
-          case "USACounties":
-            e = USACountiesEntities.entities.values.find(
-              (e) => +e.fips === +x.id
-            );
-            break;
+        let e,
+          ds = dataSources[covType];
+        if (!ds) return;
+        if (covType === "Countries_States") {
+          e = ds.entities.values.find((e) => e.id === x.id);
+        } else {
+          e = ds.entities.values.filter((e) => {
+            return e.id.split("_")[0] === x.id;
+          });
         }
         hoverEntity(e);
       });
