@@ -1,5 +1,10 @@
 import * as Cesium from "../Source/Cesium.js";
 import { stringToCesiumColor } from "./convertColors.js";
+import {
+  isIos,
+  isInStandaloneMode,
+  detectWindowOrientation,
+} from "./detectiPhone.js";
 
 function init(token) {
   let mapProjection = new Cesium.WebMercatorProjection(Cesium.Ellipsoid.WGS84);
@@ -40,7 +45,9 @@ function init(token) {
     logScale,
     colorScaleLog,
     sortMethod = { method: "cases", direction: "dsc" },
-    legendHidden;
+    legendHidden = false,
+    topLegHidden = false,
+    totalsHidden = false;
 
   Cesium.Ion.defaultAccessToken = token;
 
@@ -397,7 +404,12 @@ function init(token) {
                 updateMap().then(() => {
                   drawLegend();
                 });
-                if (window.innerWidth < 450) {
+                if (isIos() && !isInStandaloneMode()) {
+                  setTimeout(() => {
+                    showAddToHomeScreen();
+                  }, 1000 * 15);
+                }
+                if (detectWindowOrientation() === "portrait") {
                   setTimeout(() => {
                     toggleLegend();
                   }, 1000);
@@ -408,6 +420,15 @@ function init(token) {
           .catch((error) => console.log("error", error));
       })
       .catch((error) => console.log("error", error));
+  }
+
+  function showAddToHomeScreen() {
+    $("body").append(
+      `<div id="addToHomeScreen"><img id="homeScreenIcon" src="img/home_screen_icon.jpg"><img id="iosShareIcon" src="img/ios_share.png">Add this to your home screen for better experience.</div>`
+    );
+    $("#addToHomeScreen").click(function () {
+      $(this).remove();
+    });
   }
 
   function initUSAData() {
@@ -444,7 +465,37 @@ function init(token) {
         updated
       ).fromNow()})</span></div>`
     );
-    t.append(`<div class="total_details"></div>`);
+
+    if (detectWindowOrientation()) {
+      t.append(
+        `<div id="toggleTotals"><div style="transform:rotate(${
+          totalsHidden ? 0 : 180
+        }deg);"><i class="fa fa-angle-double-up"></i></div></div>`
+      );
+      $("#toggleTotals").click(function () {
+        $(".total_details").slideToggle();
+        totalsHidden = !totalsHidden;
+        $("#toggleTotals > div").css({
+          transform: `rotate(${totalsHidden ? 0 : 180}deg)`,
+        });
+        let vdsc = $("#viewingDateSliderContainer");
+        if (vdsc[0]) {
+          let interval = setInterval(() => {
+            vdsc.css({
+              bottom: `${$("#totals").height() + 25}px`,
+            });
+          }, 15);
+          setTimeout(() => {
+            clearInterval(interval);
+          }, 500);
+        }
+      });
+    }
+    t.append(
+      `<div class="total_details" ${
+        totalsHidden ? 'style="display:none;"' : ""
+      }></div>`
+    );
     let td = $(".total_details");
     td.append(
       `<div class="active">Active: ${formatN(
@@ -701,7 +752,9 @@ function init(token) {
     }
     $("#viewingDateSliderContainer").remove();
     $("#cesiumContainer").append(
-      `<div id="viewingDateSliderContainer">
+      `<div id="viewingDateSliderContainer" style="bottom:${
+        $("#totals").height() + 25
+      }px;">
       <div id="date-popper"></div>
       <div id="dateSliderPlay" style="${
         dateAnimation
@@ -1087,13 +1140,19 @@ function init(token) {
         padding:3px;
         ">Legend</div>`);
 
-    if (window.innerWidth < 450 || window.innerHeight < 450) {
+    let windowO = detectWindowOrientation();
+
+    if (windowO === "portrait") {
       $("#COVID_legend").append(
-        `<div id="legendToggle" class="backdrop"></div>`
+        `<div id="legendToggle" class="backdrop"><div style="transform:rotate(${
+          legendHidden ? 180 : 0
+        }deg);"><i class="fa fa-angle-double-left"></i></div></div>`
       );
       $("#legendToggle").click(toggleLegend);
     }
-    $("#COVID_legend").append(`<div class="radios">
+    $("#COVID_legend").append(`<div class="radios" ${
+      topLegHidden ? 'style="display:none;"' : ""
+    }>
         <div>
         <input type="radio" id="Countries" name="cov_type" value="Countries" ${
           covType === "Countries" ? "checked" : ""
@@ -1127,7 +1186,7 @@ function init(token) {
         </span>
         </div>
         </div>
-        <div class="radios">
+        <div class="radios" ${topLegHidden ? 'style="display:none;"' : ""}>
         <div>
         <input type="checkbox" id="extrudeHeights" name="extrudeHeights" ${
           extrudeHeights ? "checked" : ""
@@ -1141,7 +1200,9 @@ function init(token) {
         </div>`);
 
     $("#COVID_legend").append(
-      `<div id="COVID_leg_details" style="padding: 8px 0;"></div>`
+      `<div id="COVID_leg_details" style="padding: 8px 0;${
+        topLegHidden ? "display:none;" : ""
+      }"></div>`
     );
 
     $("#extrudeHeights").change(function () {
@@ -1272,7 +1333,21 @@ function init(token) {
       .style("text-align", "right")
       .attr("y", height - 5)
       .attr("x", width - 55);
-
+    if (windowO === "landscape") {
+      $("#COVID_legend_container").append(
+        `<div id="toggleTopLeg"><div style="transform:rotate(${
+          topLegHidden ? 180 : 0
+        }deg);"><i class="fa fa-angle-double-up"></i></div></div>`
+      );
+      $("#toggleTopLeg").click(function () {
+        $(".radios").slideToggle();
+        $("#COVID_leg_details").slideToggle();
+        topLegHidden = !topLegHidden;
+        $("#toggleTopLeg > div").css({
+          transform: `rotate(${topLegHidden ? 180 : 0}deg)`,
+        });
+      });
+    }
     $("#COVID_legend_container").append(`<div class="list"></div>`);
     let arrow = sortMethod.direction === "dsc" ? "↓" : "↑";
     $(`.list`).append(`
@@ -1474,7 +1549,7 @@ function init(token) {
     //     entities = entities.filter(e => e.id.module !== "haveVisited");
     //     if (entities.length) e = entities[0];
     // }
-    if (e && e.id) {
+    if (e && e.id && !detectWindowOrientation()) {
       hoverEntity(e.id);
     } else {
       $("#customInfoBox").hide();
@@ -1586,8 +1661,10 @@ function init(token) {
     if (legendHidden) {
       leg.removeClass("slideLeft");
       leg.addClass("slideRight");
+      $("#legendToggle > div").css({ transform: `rotate(0deg)` }); //.animate({ transform: `rotate(0deg)` });
       legendHidden = false;
     } else {
+      $("#legendToggle > div").css({ transform: `rotate(180deg)` }); //.animate({ transform: `rotate(180deg)` });
       leg.addClass("slideLeft");
       leg.removeClass("slideRight");
       legendHidden = true;
