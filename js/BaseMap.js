@@ -399,6 +399,8 @@ function init(token) {
                   let id = d.countryInfo.iso3;
                   if (id) COVID19.countries[id] = d;
                 });
+                $("#loading").hide();
+                clearInterval(loadingInterval);
                 initTotals();
                 initUSAData();
                 updateMap().then(() => {
@@ -588,18 +590,20 @@ function init(token) {
         e.polygon.arcType = Cesium.ArcType.GEODESIC;
         e.polygon.height = undefined;
         e.disableDepthTestDistance = Number.POSITIVE_INFINITY;
-        let outlineMaterial = Cesium.Color.WHITE.withAlpha(0.5);
         e.polygon.outline = false;
+        let id = generateID(e);
+        let data = getData(id);
+        setColor(e, data);
+        setDescription(e, data);
+        let outlineMaterial = Cesium.Color.WHITE.withAlpha(
+          data && data.cases ? 0.5 : 0.1
+        );
         e.polyline = new Cesium.PolylineGraphics({
           positions: e.polygon.hierarchy._value.positions,
           material: outlineMaterial,
           width: 1,
           eyeOffset: new Cesium.Cartesian3(0, 0, -6000),
         });
-        let id = generateID(e);
-        let data = getData(id);
-        setColor(e, data);
-        setDescription(e, data);
         let count = dataSources[covType].entities.values.filter(
           (x) => x.id.split("_")[0] == id
         ).length;
@@ -967,108 +971,108 @@ function init(token) {
     }
   }
 
-  function drawUSAStates() {
-    if (USAStatesEntities) {
-      USAStatesEntities.entities.removeAll();
-      viewer.dataSources.remove(USAStatesEntities);
-      USAStatesEntities = undefined;
-    }
-    if (globeData.USAStates) {
-      loadEntities(globeData.USAStates);
-    } else {
-      d3.json("data/USA_states_20m.json").then((land) => {
-        globeData.USAStates = land;
-        findCentroids(land);
-        loadEntities(land);
-      });
-    }
+  // function drawUSAStates() {
+  //   if (USAStatesEntities) {
+  //     USAStatesEntities.entities.removeAll();
+  //     viewer.dataSources.remove(USAStatesEntities);
+  //     USAStatesEntities = undefined;
+  //   }
+  //   if (globeData.USAStates) {
+  //     loadEntities(globeData.USAStates);
+  //   } else {
+  //     d3.json("data/USA_states_20m.json").then((land) => {
+  //       globeData.USAStates = land;
+  //       findCentroids(land);
+  //       loadEntities(land);
+  //     });
+  //   }
 
-    function loadEntities(land) {
-      USAStatesEntities = new Cesium.CustomDataSource("USACountiesEntities");
-      viewer.dataSources.add(USAStatesEntities);
-      Cesium.GeoJsonDataSource.load(land).then(function (dataSource) {
-        let entities = dataSource.entities.values;
-        entities.forEach((e) => {
-          e.polygon.arcType = Cesium.ArcType.GEODESIC;
-          e.polygon.height = undefined;
-          e.disableDepthTestDistance = Number.POSITIVE_INFINITY;
-          e.polygon.material = new Cesium.Color(
-            Math.random(),
-            Math.random(),
-            Math.random()
-          );
-          let outlineMaterial = Cesium.Color.WHITE.withAlpha(0.3);
-          e.polygon.outline = false;
-          e.polyline = new Cesium.PolylineGraphics({
-            positions: e.polygon.hierarchy._value.positions,
-            material: outlineMaterial,
-            width: 1,
-            eyeOffset: new Cesium.Cartesian3(0, 0, -6000),
-          });
-          USAStatesEntities.entities.add(e);
-        });
-      });
-    }
-  }
+  //   function loadEntities(land) {
+  //     USAStatesEntities = new Cesium.CustomDataSource("USACountiesEntities");
+  //     viewer.dataSources.add(USAStatesEntities);
+  //     Cesium.GeoJsonDataSource.load(land).then(function (dataSource) {
+  //       let entities = dataSource.entities.values;
+  //       entities.forEach((e) => {
+  //         e.polygon.arcType = Cesium.ArcType.GEODESIC;
+  //         e.polygon.height = undefined;
+  //         e.disableDepthTestDistance = Number.POSITIVE_INFINITY;
+  //         e.polygon.material = new Cesium.Color(
+  //           Math.random(),
+  //           Math.random(),
+  //           Math.random()
+  //         );
+  //         let outlineMaterial = Cesium.Color.WHITE.withAlpha(0.3);
+  //         e.polygon.outline = false;
+  //         e.polyline = new Cesium.PolylineGraphics({
+  //           positions: e.polygon.hierarchy._value.positions,
+  //           material: outlineMaterial,
+  //           width: 1,
+  //           eyeOffset: new Cesium.Cartesian3(0, 0, -6000),
+  //         });
+  //         USAStatesEntities.entities.add(e);
+  //       });
+  //     });
+  //   }
+  // }
 
-  function drawUSACounties() {
-    if (USACountiesEntities) {
-      USACountiesEntities.entities.removeAll();
-      viewer.dataSources.remove(USACountiesEntities);
-      USACountiesEntities = undefined;
-    }
+  // function drawUSACounties() {
+  //   if (USACountiesEntities) {
+  //     USACountiesEntities.entities.removeAll();
+  //     viewer.dataSources.remove(USACountiesEntities);
+  //     USACountiesEntities = undefined;
+  //   }
 
-    if (globeData.USACounties) {
-      loadEntities(globeData.USACounties);
-    } else {
-      d3.json("data/USA_counties_20m.json").then((land) => {
-        globeData.USACounties = land;
-        findCentroids(land);
-        loadEntities(land);
-      });
-    }
+  //   if (globeData.USACounties) {
+  //     loadEntities(globeData.USACounties);
+  //   } else {
+  //     d3.json("data/USA_counties_20m.json").then((land) => {
+  //       globeData.USACounties = land;
+  //       findCentroids(land);
+  //       loadEntities(land);
+  //     });
+  //   }
 
-    function loadEntities(land) {
-      USACountiesEntities = new Cesium.CustomDataSource("USACountiesEntities");
-      viewer.dataSources.add(USACountiesEntities);
-      Cesium.GeoJsonDataSource.load(land).then(function (dataSource) {
-        let entities = dataSource.entities.values;
-        entities.forEach((e) => {
-          let { FIPS } = e.properties;
-          FIPS = FIPS.getValue();
-          let county = COVID19.USACounties.find(
-            (x) => +x.confirmed.countyFIPS === +FIPS
-          );
-          let conf = county ? +county.confirmed[viewingDate] : 0;
-          let deaths = county ? +county.deaths[viewingDate] : 0;
-          if (county && (conf || deaths)) {
-            // e["_id"] = FIPS;
-            e.fips = +FIPS;
-            e.name = `${county.confirmed["County Name"]}, ${county.confirmed.State}`;
-            e.description = `<div style="display:block;"><div style="font-weight:bold;">As of ${viewingDate}</div><div>Confirmed: ${formatN(
-              conf
-            )}</div><div>Deaths: ${formatN(deaths)}</div></div>`;
+  //   function loadEntities(land) {
+  //     USACountiesEntities = new Cesium.CustomDataSource("USACountiesEntities");
+  //     viewer.dataSources.add(USACountiesEntities);
+  //     Cesium.GeoJsonDataSource.load(land).then(function (dataSource) {
+  //       let entities = dataSource.entities.values;
+  //       entities.forEach((e) => {
+  //         let { FIPS } = e.properties;
+  //         FIPS = FIPS.getValue();
+  //         let county = COVID19.USACounties.find(
+  //           (x) => +x.confirmed.countyFIPS === +FIPS
+  //         );
+  //         let conf = county ? +county.confirmed[viewingDate] : 0;
+  //         let deaths = county ? +county.deaths[viewingDate] : 0;
+  //         if (county && (conf || deaths)) {
+  //           // e["_id"] = FIPS;
+  //           e.fips = +FIPS;
+  //           e.name = `${county.confirmed["County Name"]}, ${county.confirmed.State}`;
+  //           e.description = `<div style="display:block;"><div style="font-weight:bold;">As of ${viewingDate}</div><div>Confirmed: ${formatN(
+  //             conf
+  //           )}</div><div>Deaths: ${formatN(deaths)}</div></div>`;
 
-            e.polygon.arcType = Cesium.ArcType.GEODESIC;
-            e.polygon.height = undefined;
-            e.disableDepthTestDistance = Number.POSITIVE_INFINITY;
-            setColor(e, { cases: conf });
-            // e.polygon.material = new Cesium.Color(0.5, 0.5, 0.5).withAlpha(0.7);
-            let outlineMaterial = Cesium.Color.WHITE.withAlpha(0.3);
-            e.polygon.outline = false;
-            // e.polygon.outlineColor = outlineMaterial;
-            e.polyline = new Cesium.PolylineGraphics({
-              positions: e.polygon.hierarchy._value.positions,
-              material: outlineMaterial,
-              width: 1,
-              eyeOffset: new Cesium.Cartesian3(0, 0, -6000),
-            });
-            USACountiesEntities.entities.add(e);
-          }
-        });
-      });
-    }
-  }
+  //           e.polygon.arcType = Cesium.ArcType.GEODESIC;
+  //           e.polygon.height = undefined;
+  //           e.disableDepthTestDistance = Number.POSITIVE_INFINITY;
+  //           setColor(e, { cases: conf });
+  //           // e.polygon.material = new Cesium.Color(0.5, 0.5, 0.5).withAlpha(0.7);
+  //           let outlineMaterial = Cesium.Color.WHITE.withAlpha(0.3);
+  //           e.polygon.outline = false;
+  //           // e.polygon.outlineColor = outlineMaterial;
+  //           e.polyline = new Cesium.PolylineGraphics({
+  //             positions: e.polygon.hierarchy._value.positions,
+  //             material: outlineMaterial,
+  //             width: 1,
+  //             eyeOffset: new Cesium.Cartesian3(0, 0, -6000),
+  //           });
+  //           USACountiesEntities.entities.add(e);
+  //         }
+  //       });
+  //     });
+  //   }
+  // }
 
   function setColor(e, covid) {
     let c = covid ? covid.cases : 0;

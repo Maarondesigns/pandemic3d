@@ -12,7 +12,18 @@ body {
   overflow: hidden;
   font: 16px "Roboto", sans-serif;
 }
-
+#loading {
+  height: 100vh;
+  width: 100vw;
+  position: fixed;
+  z-index: 9;
+  background: black;
+  color: white;
+  font-size: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 .backdrop {
   background: rgba(27, 33, 46, 0.9);
 }

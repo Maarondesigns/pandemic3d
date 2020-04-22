@@ -17,7 +17,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <link rel="apple-touch-icon" href="/img/home_screen_icon.jpg">
+    <link rel="apple-touch-icon" href="/img/home_screen_icon.jpg" />
     <meta property="og:title" content="Pandemic 3D - A Covid19 Visualizer" />
     <meta property="og:type" content="article" />
     <meta
@@ -32,22 +32,14 @@
     <meta name="twitter:title" content="Pandemic 3D - A Covid19 Visualizer" />
     <meta name="twitter:card" content="summary_large_image" />
     <title>PANDEMIC 3D</title>
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"
-    />
+    <script
+      src="https://kit.fontawesome.com/81b78a862f.js"
+      crossorigin="anonymous"
+    ></script>
     <link
       href="https://fonts.googleapis.com/css?family=Roboto&display=swap"
       rel="stylesheet"
     />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
-    <script src="https://d3js.org/d3.v5.min.js"></script>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
-    <!-- <script src="https://unpkg.com/versor"></script>
-    <script src="https://unpkg.com/d3-inertia"></script> -->
-    <script type="module" src="Source/Cesium.js"></script>
-    <!-- <script src="https://cesium.com/downloads/cesiumjs/releases/1.62/Build/Cesium/Cesium.js"></script> -->
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
     <link
       href="https://cesium.com/downloads/cesiumjs/releases/1.62/Build/Cesium/Widgets/widgets.css"
       rel="stylesheet"
@@ -55,8 +47,64 @@
     <link rel="stylesheet" href="css/index.css" media="screen" />
   </head>
   <body>
+    <div id="loading"></div>
     <div id="cesiumContainer"></div>
     <div id="customInfoBox" class="backdrop"></div>
+    <script>
+      let loadingIcon = [
+        "spinner",
+        "viruses",
+        "hands-wash",
+        "hospital-user",
+        "head-side-mask",
+        "head-side-cough",
+        "temperature-high",
+        "lungs",
+        "toilet-paper",
+        "people-arrows",
+      ];
+      let loadingText = [
+        "loading",
+        "scanning for viruses",
+        "washing hands",
+        "supporting doctors",
+        "putting on mask",
+        "counting coughs",
+        "taking temperature",
+        "monitoring lungs",
+        "searching for toilet paper",
+        "social distancing",
+      ];
+      let i = 0;
+      function updateLoading() {
+        if (!loadingIcon[i]) i = 1;
+        document.getElementById(
+          "loading"
+        ).innerHTML = `<div><i style="padding: 0 5px; font-size: 26px;" id="fa-icon" class="fas fa-${loadingIcon[i]}"></i><span>${loadingText[i]} ...</span></div>`;
+        i += 1;
+      }
+      updateLoading();
+      let faw = 0;
+      let checkFA = function () {
+        let i = document.getElementById("fa-icon");
+        faw = i ? i.getBoundingClientRect().width : 0;
+      };
+      let loadingInterval;
+      let setFAW = setInterval(() => {
+        checkFA();
+        if (faw > 20) {
+          clearInterval(setFAW);
+          loadingInterval = setInterval(updateLoading, 3000);
+        }
+      }, 10);
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <!-- <script src="https://unpkg.com/versor"></script>
+      <script src="https://unpkg.com/d3-inertia"></script> -->
+    <!-- <script src="https://cesium.com/downloads/cesiumjs/releases/1.62/Build/Cesium/Cesium.js"></script> -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script type="module" src="Source/Cesium.js"></script>
     <script type="module" src="js/convertColors.js"></script>
     <script type="module" src="js/BaseMap.js"></script>
   </body>
