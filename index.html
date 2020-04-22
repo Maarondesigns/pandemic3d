@@ -100,7 +100,6 @@
       ];
       let i = 0;
       function updateLoading() {
-        console.log("updateLoading", document.getElementById("loading"));
         if (!loadingIcon[i]) i = 1;
         document.getElementById(
           "loading"
@@ -118,11 +117,15 @@
 
       function addScript(s) {
         console.log(s);
-        var scriptBlock = document.createElement("script");
+        var scriptBlock = document.createElement("SCRIPT");
+        console.log("created scriptblock", { scriptBlock });
         scriptBlock.setAttribute("type", "text/javascript");
         scriptBlock.setAttribute("src", s.src);
+        console.log("set attributes", { scriptBlock });
         if (s.type) scriptBlock.setAttribute("type", s.type);
-        document.getElementsByTagName("head")[0].appendChild(scriptBlock);
+        console.log("set type attribute", { scriptBlock });
+        console.log("head", document.querySelector("HEAD"));
+        document.querySelector("HEAD").appendChild(scriptBlock);
       }
     </script>
     <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>

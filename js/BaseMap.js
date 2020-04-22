@@ -399,6 +399,7 @@ function init(token) {
                   let id = d.countryInfo.iso3;
                   if (id) COVID19.countries[id] = d;
                 });
+                console.log(COVID19);
                 $("#loading").hide();
                 clearInterval(loadingInterval);
                 initTotals();
