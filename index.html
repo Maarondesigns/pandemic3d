@@ -46,7 +46,7 @@
     />
     <link rel="stylesheet" href="css/index.css" media="screen" />
   </head>
-  <body>
+  <body onload="loadScripts()">
     <div id="loading">
       <div>
         <i
@@ -100,28 +100,24 @@
       ];
       let i = 0;
       function updateLoading() {
+        console.log("updateLoading", document.getElementById("loading"));
         if (!loadingIcon[i]) i = 1;
         document.getElementById(
           "loading"
         ).innerHTML = `<div><i style="padding: 0 5px; font-size: 26px;" id="fa-icon" class="fas fa-${loadingIcon[i]}"></i><span>${loadingText[i]} ...</span></div>`;
         i += 1;
       }
-      updateLoading();
-      let faw = 0;
-      let checkFA = function () {
-        let i = document.getElementById("fa-icon");
-        faw = i ? i.getBoundingClientRect().width : 0;
-      };
+
       let loadingInterval;
-      let setFAW = setInterval(() => {
-        checkFA();
-        if (faw > 20) {
-          clearInterval(setFAW);
-          loadingInterval = setInterval(updateLoading, 3000);
-          scripts.forEach((x) => addScript(x));
-        }
-      }, 10);
+
+      function loadScripts() {
+        updateLoading();
+        loadingInterval = setInterval(updateLoading, 3000);
+        scripts.forEach((x) => addScript(x));
+      }
+
       function addScript(s) {
+        console.log(s);
         var scriptBlock = document.createElement("script");
         scriptBlock.setAttribute("type", "text/javascript");
         scriptBlock.setAttribute("src", s.src);
