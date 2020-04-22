@@ -99,15 +99,16 @@
         "social distancing",
       ];
       let i = 0;
+      let loadingInterval;
+
       function updateLoading() {
         if (!loadingIcon[i]) i = 1;
-        document.getElementById(
-          "loading"
-        ).innerHTML = `<div><i style="padding: 0 5px; font-size: 26px;" id="fa-icon" class="fas fa-${loadingIcon[i]}"></i><span>${loadingText[i]} ...</span></div>`;
+        let l = document.getElementById("loading");
+        if (l.style.display === "none") clearInterval(loadingInterval);
+        else
+          l.innerHTML = `<div><i style="padding: 0 5px; font-size: 26px;" id="fa-icon" class="fas fa-${loadingIcon[i]}"></i><span>${loadingText[i]} ...</span></div>`;
         i += 1;
       }
-
-      let loadingInterval;
 
       function loadScripts() {
         updateLoading();
