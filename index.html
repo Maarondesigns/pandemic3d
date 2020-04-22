@@ -47,10 +47,33 @@
     <link rel="stylesheet" href="css/index.css" media="screen" />
   </head>
   <body>
-    <div id="loading"></div>
+    <div id="loading">
+      <div>
+        <i
+          style="padding: 0 5px; font-size: 26px;"
+          id="fa-icon"
+          class="fas fa-spinner"
+        ></i
+        ><span>loading ...</span>
+      </div>
+    </div>
     <div id="cesiumContainer"></div>
     <div id="customInfoBox" class="backdrop"></div>
     <script>
+      let scripts = [
+        {
+          src:
+            "https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js",
+        },
+        { src: "https://d3js.org/d3.v5.min.js" },
+        {
+          src:
+            "https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js",
+        },
+        { src: "Source/Cesium.js", type: "module" },
+        { src: "js/convertColors.js", type: "module" },
+        { src: "js/BaseMap.js", type: "module" },
+      ];
       let loadingIcon = [
         "spinner",
         "viruses",
@@ -95,17 +118,22 @@
         if (faw > 20) {
           clearInterval(setFAW);
           loadingInterval = setInterval(updateLoading, 3000);
+          scripts.forEach((x) => addScript(x));
         }
       }, 10);
+      function addScript(s) {
+        var scriptBlock = document.createElement("script");
+        scriptBlock.setAttribute("type", "text/javascript");
+        scriptBlock.setAttribute("src", s.src);
+        if (s.type) scriptBlock.setAttribute("type", s.type);
+        document.getElementsByTagName("head")[0].appendChild(scriptBlock);
+      }
     </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
     <script src="https://d3js.org/d3.v5.min.js"></script>
-    <!-- <script src="https://unpkg.com/versor"></script>
-      <script src="https://unpkg.com/d3-inertia"></script> -->
-    <!-- <script src="https://cesium.com/downloads/cesiumjs/releases/1.62/Build/Cesium/Cesium.js"></script> -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
     <script type="module" src="Source/Cesium.js"></script>
     <script type="module" src="js/convertColors.js"></script>
-    <script type="module" src="js/BaseMap.js"></script>
+    <script type="module" src="js/BaseMap.js"></script> -->
   </body>
 </html>
