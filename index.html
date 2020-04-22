@@ -116,16 +116,11 @@
       }
 
       function addScript(s) {
-        console.log(s);
         var scriptBlock = document.createElement("SCRIPT");
-        console.log("created scriptblock", { scriptBlock });
-        scriptBlock.setAttribute("type", "text/javascript");
-        scriptBlock.setAttribute("src", s.src);
-        console.log("set attributes", { scriptBlock });
         if (s.type) scriptBlock.setAttribute("type", s.type);
-        console.log("set type attribute", { scriptBlock });
-        console.log("head", document.querySelector("HEAD"));
-        document.querySelector("HEAD").appendChild(scriptBlock);
+        else scriptBlock.setAttribute("type", "text/javascript");
+        scriptBlock.setAttribute("src", s.src);
+        document.querySelector("BODY").appendChild(scriptBlock);
       }
     </script>
     <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
