@@ -594,6 +594,7 @@ function init(token) {
         let data = getData(id);
         setColor(e, data);
         setDescription(e, data);
+        e.data = data;
         let outlineMaterial = Cesium.Color.WHITE.withAlpha(
           data && data.cases ? 0.5 : 0.1
         );
@@ -619,7 +620,7 @@ function init(token) {
         return COVID19.countries[id];
       case "USACounties":
         let county = COVID19.USACounties.find(
-          (x) => +x.confirmed.countyFIPS === id
+          (x) => +x.confirmed.countyFIPS === +id
         );
         if (county) {
           let obj = JSON.parse(JSON.stringify(county));
@@ -675,6 +676,7 @@ function init(token) {
       });
       switch (covType) {
         case "Countries":
+          if (JHDEntities) JHDEntities.entities.removeAll();
           allCases = Object.keys(COVID19.countries).map(
             (k) => COVID19.countries[k].cases
           );
@@ -689,6 +691,7 @@ function init(token) {
           drawJHD();
           break;
         case "USACounties":
+          if (JHDEntities) JHDEntities.entities.removeAll();
           if (viewingDate === mostRecentData.format(dateFormat)) {
             allCases = COVID19.USACounties.map(
               (c) => +c.confirmed[viewingDate]
@@ -702,6 +705,7 @@ function init(token) {
           if (!dontDrawSlider) drawDateSlider();
           break;
         case "USAStates":
+          if (JHDEntities) JHDEntities.entities.removeAll();
           if (viewingDate === mostRecentData.format(dateFormat)) {
             let states = {};
             COVID19.USACounties.forEach((c) => {
@@ -729,15 +733,18 @@ function init(token) {
       let d = moment(viewingDate, dateFormat).add(1, "day");
       if (d.isAfter(mostRecentData)) d = oldestData;
       viewingDate = d.format(dateFormat);
-      updateMap().then(() => {
-        drawLegend();
-      });
+      // updateMap().then(() => {
+      //   drawLegend();
+      // });
+      dateChanged();
+      drawLegend();
+      drawDateSlider();
     }
     dateAnimationInterval = setInterval(
       () => {
         nextDay();
       },
-      covType === "USAStates" ? 2500 : 6000
+      2000 //covType === "USAStates" ? 2500 : 6000
     );
     nextDay();
   }
@@ -815,9 +822,22 @@ function init(token) {
       $(this).removeClass("focused");
       let d = array[this.value];
       viewingDate = d;
-      updateMap(true).then(() => {
-        drawLegend();
-      });
+      dateChanged();
+      drawLegend();
+    });
+  }
+
+  function dateChanged() {
+    let entities = dataSources[covType].entities.values;
+    let changed = 0;
+    entities.forEach((e, ei) => {
+      let data = getData(e.id.split("_")[0]);
+      if (data && data.cases !== e.data.cases) {
+        changed += 1;
+        e.data = data;
+        setDescription(e, data);
+        setColor(e, data);
+      }
     });
   }
 
@@ -959,10 +979,11 @@ function init(token) {
             +d.coordinates.latitude
           ),
           name,
-          description: `
+          description: `<div>
                         <div>Confirmed: ${d.stats.confirmed}</div>
                         <div>Deaths: ${d.stats.deaths}</div>
-                        <div>Recovered: ${d.stats.recovered}</div>`,
+                        <div>Recovered: ${d.stats.recovered}</div>
+                        </div>`,
           point,
           ellipse,
         });
@@ -1095,6 +1116,7 @@ function init(token) {
       }
     } else if (e.polygon) {
       e.polygon.material = new Cesium.Color(0.5, 0.5, 0.5).withAlpha(0.4);
+      e.polygon.extrudedHeight = 0;
     }
   }
 
@@ -1445,9 +1467,9 @@ function init(token) {
     });
     list.forEach((x, i) => {
       $(`.list`).append(
-        `<div id=${x.id}><div>${i + 1}</div><div>${x.name}</div><div>${
+        `<div id=${x.id}><div>${i + 1}</div><div>${x.name}</div><div>${formatN(
           x.value
-        }</div></div>`
+        )}</div></div>`
       );
       $(`.list > #${x.id}`).click(function () {
         let e,
@@ -1580,7 +1602,11 @@ function init(token) {
       let { centroid } = properties;
       if (centroid) {
         centroid = centroid.getValue();
-        position = new Cesium.Cartesian3.fromDegrees(centroid[0], centroid[1]);
+        position = new Cesium.Cartesian3.fromDegrees(
+          centroid[0],
+          centroid[1],
+          e.polygon.extrudedHeight.getValue()
+        );
       }
     }
     updateElementPosition(position, "#customInfoBox");
