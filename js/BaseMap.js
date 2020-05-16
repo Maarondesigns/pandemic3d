@@ -23,6 +23,8 @@ function init(token) {
       USACounties: 100000,
       USAStates: 100000,
     },
+    dataKeys,
+    selectedDataKey,
     viewingDate,
     dateAnimation = false,
     dateAnimationInterval,
@@ -113,7 +115,7 @@ function init(token) {
     esriStreet,
   ];
 
-  let selectedImageryProviderViewModel = naturalEarth;
+  let selectedImageryProviderViewModel = esriSat;
 
   let viewer = new Cesium.Viewer("cesiumContainer", {
     // scene3DOnly: true,
@@ -197,6 +199,43 @@ function init(token) {
   // subscribeLayerParameter("saturation");
   // subscribeLayerParameter("gamma");
 
+  // function createModel(url, height) {
+  //   var position = Cesium.Cartesian3.fromDegrees(
+  //     -80.289691,
+  //     25.693275,
+  //     height
+  //   );
+  //   var heading = Cesium.Math.toRadians(0);
+  //   var pitch = 0;
+  //   var roll = 0;
+  //   var hpr = new Cesium.HeadingPitchRoll(heading, pitch, roll);
+  //   var orientation = Cesium.Transforms.headingPitchRollQuaternion(
+  //     position,
+  //     hpr
+  //   );
+
+  //   var model = viewer.entities.add({
+  //     name: url,
+  //     position: position,
+  //     orientation: orientation,
+  //     model: {
+  //       uri: url,
+  //       minimumPixelSize : 200,
+  //       color: Cesium.Color.ORANGE
+  //       // maximumScale: 20000,
+  //     },
+  //   });
+  //   Cesium.when(model.readyPromise)
+  //     .then(function () {
+  //       viewer.flyTo(model, {offset: new Cesium.HeadingPitchRange(Cesium.Math.toRadians(90), -1, 0)})
+  //     })
+  //     .otherwise(function (error) {
+  //       window.alert(error);
+  //     });
+  // }
+
+  // createModel("/data/3dmodels/schoolbus.glb", 0.0);
+
   function updateViewModel() {
     // for (let i = 0; i < imageryLayers.length; i++) {
     if (imageryLayers.length > 0) {
@@ -259,11 +298,11 @@ function init(token) {
       // }
     });
 
-  viewModel.brightness = 0.8;
-  viewModel.contrast = 1.55;
-  viewModel.saturation = 0.65;
-  viewModel.gamma = 0.5;
-  updateImageryFromViewModel();
+  // viewModel.brightness = 0.8;
+  // viewModel.contrast = 1.55;
+  // viewModel.saturation = 0.65;
+  // viewModel.gamma = 0.5;
+  // updateImageryFromViewModel();
 
   let globeData = {};
 
@@ -596,7 +635,7 @@ function init(token) {
         setDescription(e, data);
         e.data = data;
         let outlineMaterial = Cesium.Color.WHITE.withAlpha(
-          data && data.cases ? 0.5 : 0.1
+          data && data[[selectedDataKey]] ? 0.5 : 0.1
         );
         e.polyline = new Cesium.PolylineGraphics({
           positions: e.polygon.hierarchy._value.positions,
@@ -624,7 +663,7 @@ function init(token) {
         );
         if (county) {
           let obj = JSON.parse(JSON.stringify(county));
-          obj.cases = +county.confirmed[viewingDate];
+          obj.confirmed = +county.confirmed[viewingDate];
           obj.deaths = +county.deaths[viewingDate];
           return obj;
         }
@@ -632,15 +671,15 @@ function init(token) {
       case "USAStates":
         let states = {};
         COVID19.USACounties.forEach((c) => {
-          let cases = c.confirmed ? +c.confirmed[viewingDate] : 0;
+          let confirmed = c.confirmed ? +c.confirmed[viewingDate] : 0;
           let deaths = c.deaths ? +c.deaths[viewingDate] : 0;
           let sFIPS = c.confirmed.stateFIPS;
           if (sFIPS.length === 1) sFIPS = `0${sFIPS}`;
           let s = states[sFIPS];
           if (s) {
-            states[sFIPS].cases += cases;
+            states[sFIPS].confirmed += confirmed;
             states[sFIPS].deaths += deaths;
-          } else states[sFIPS] = { cases, deaths };
+          } else states[sFIPS] = { confirmed, deaths };
         });
         return states[id];
     }
@@ -674,11 +713,18 @@ function init(token) {
         viewer.dataSources.remove(ds);
         ds = undefined;
       });
+
       switch (covType) {
         case "Countries":
+          dataKeys = Object.keys(
+            COVID19.countries[Object.keys(COVID19.countries)[0]]
+          ).filter(
+            (x) => !/updated|country|countryInfo|population|continent/.test(x)
+          );
+          if (!selectedDataKey) selectedDataKey = dataKeys[0];
           if (JHDEntities) JHDEntities.entities.removeAll();
           allCases = Object.keys(COVID19.countries).map(
-            (k) => COVID19.countries[k].cases
+            (k) => COVID19.countries[k][selectedDataKey]
           );
           minCases = Math.min(...allCases);
           maxCases = Math.max(...allCases);
@@ -687,14 +733,18 @@ function init(token) {
           $("#viewingDateSliderContainer").remove();
           break;
         case "Countries_States":
+          dataKeys = Object.keys(COVID19.JohnsHopkinsData[0].stats);
+          if (!selectedDataKey) selectedDataKey = dataKeys[0];
           $("#viewingDateSliderContainer").remove();
           drawJHD();
           break;
         case "USACounties":
+          dataKeys = Object.keys(COVID19.USACounties[0]);
+          if (!selectedDataKey) selectedDataKey = dataKeys[0];
           if (JHDEntities) JHDEntities.entities.removeAll();
           if (viewingDate === mostRecentData.format(dateFormat)) {
-            allCases = COVID19.USACounties.map(
-              (c) => +c.confirmed[viewingDate]
+            allCases = COVID19.USACounties.map((c) =>
+              c[selectedDataKey] ? +c[selectedDataKey][viewingDate] : 0
             );
             minCases = Math.min(...allCases);
             maxCases = Math.max(...allCases);
@@ -705,15 +755,23 @@ function init(token) {
           if (!dontDrawSlider) drawDateSlider();
           break;
         case "USAStates":
+          dataKeys = Object.keys(COVID19.USACounties[0]);
+          if (!selectedDataKey) selectedDataKey = dataKeys[0];
           if (JHDEntities) JHDEntities.entities.removeAll();
           if (viewingDate === mostRecentData.format(dateFormat)) {
             let states = {};
             COVID19.USACounties.forEach((c) => {
-              let v = +c.confirmed[viewingDate];
-              if (states[c.confirmed.State]) states[c.confirmed.State] += v;
-              else states[c.confirmed.State] = v;
+              let k = c[selectedDataKey];
+              if (k) {
+                let v = +k[viewingDate];
+                let state = c[selectedDataKey].State;
+                if (states[state]) states[state] += v;
+                else states[state] = v;
+              }
             });
-            COVID19.USACounties.map((c) => +c.confirmed[viewingDate]);
+            COVID19.USACounties.map((c) =>
+              c[selectedDataKey] ? +c[selectedDataKey][viewingDate] : 0
+            );
             allCases = Object.keys(states).map((k) => states[k]);
             minCases = Math.min(...allCases);
             maxCases = Math.max(...allCases);
@@ -832,7 +890,7 @@ function init(token) {
     let changed = 0;
     entities.forEach((e, ei) => {
       let data = getData(e.id.split("_")[0]);
-      if (data && data.cases !== e.data.cases) {
+      if (data && data[selectedDataKey] !== e.data[selectedDataKey]) {
         changed += 1;
         e.data = data;
         setDescription(e, data);
@@ -889,12 +947,12 @@ function init(token) {
         case "USACounties":
           e.name = `${covid.confirmed["County Name"]}, ${covid.confirmed.State}`;
           e.description = `<div style="display:block;"><div style="font-weight:bold;">As of ${viewingDate}</div><div>Confirmed: ${formatN(
-            covid.cases
+            covid.confirmed
           )}</div><div>Deaths: ${formatN(covid.deaths)}</div></div>`;
           break;
         case "USAStates":
           e.description = `<div style="display:block;"><div style="font-weight:bold;">As of ${viewingDate}</div><div>Confirmed: ${formatN(
-            covid.cases
+            covid.confirmed
           )}</div><div>Deaths: ${formatN(covid.deaths)}</div></div>`;
           break;
       }
@@ -945,7 +1003,7 @@ function init(token) {
         if (d.name.includes("Recovered")) {
           r = true;
         }
-        let v = r ? +d.stats.recovered : +d.stats.confirmed;
+        let v = r ? +d.stats.recovered : +d.stats[selectedDataKey];
         if (!v) v = 1;
         let radius = Math.ceil(Math.sqrt(v * ratio));
         let c = r ? [0, 1, 0] : [1, 0, 0];
@@ -1095,7 +1153,7 @@ function init(token) {
   // }
 
   function setColor(e, covid) {
-    let c = covid ? covid.cases : 0;
+    let c = covid ? covid[selectedDataKey] : 0;
     if (c) {
       let rgb = colorFunction(c);
       let material = stringToCesiumColor(
@@ -1152,6 +1210,24 @@ function init(token) {
 
   function drawLegend() {
     $("#COVID_legend_container").remove();
+    $("#selectDataKey").remove();
+
+    $("#cesiumContainer").append(
+      `<div id="selectDataKey">
+      <select>${dataKeys.map(
+        (x) =>
+          `<option value=${x} ${
+            selectedDataKey === x ? "selected" : ""
+          }>${x}</option>`
+      )}</select>
+      </div>`
+    );
+
+    $("#selectDataKey > select").on("change", function (e) {
+      selectedDataKey = e.target.value;
+      updateMap().then(() => drawLegend());
+    });
+
     $("body").append(
       `<div id="COVID_legend_container" class="backdrop" ${
         legendHidden ? `style="transform: translateX(-100%);"` : ""
@@ -1243,6 +1319,7 @@ function init(token) {
 
     $("input[type=radio][name=cov_type]").change(function () {
       covType = this.value;
+      selectedDataKey = undefined;
       stopDateAnimation();
       if (covType === "USACounties" || covType === "USAStates") {
         if (scene.mode === Cesium.SceneMode.COLUMBUS_VIEW) {
@@ -1300,11 +1377,12 @@ function init(token) {
 
     const barHeight = 20;
     const width = $("#COVID_leg_details").width() * 0.9;
-    const points = d3.range(minCases, maxCases, maxCases / 100);
+    const points = d3.range(1, maxCases, maxCases / 20);
     const barWidth = width / points.length;
     const height = barHeight;
 
     $("#COVID_leg_details").html("");
+
     $("#COVID_leg_details").append(`<div id="COVID_leg_svg"></div>
 <button class="${
       scale === "log" ? "confirmButton" : "noButton"
@@ -1330,6 +1408,10 @@ function init(token) {
       }
     });
 
+    $("#COVID_legend").append(
+      `<div id="legBarTooltip"><div class="lbt_text"></div><div class="after"></div></div>`
+    );
+
     const svg = d3
       .select("#COVID_legend #COVID_leg_svg")
       .append("svg")
@@ -1342,46 +1424,99 @@ function init(token) {
       .data(points)
       .enter()
       .append("rect")
+      .attr("class", "leg-bar")
       .attr("y", 0)
       .attr("x", (d, i) => i * barWidth)
       .attr("width", barWidth)
       .attr("height", barHeight)
-      .attr("fill", colorFunction);
+      .attr("fill", colorFunction)
+      .on("mouseout", function (d) {
+        $("#legBarTooltip").hide();
+      })
+      .on("touchend", function (d) {
+        $("#legBarTooltip").hide();
+      })
+      .on("mouseover", function (d, i) {
+        showTooltip(d, i, d3.event.pageX);
+      })
+      .on("mousemove", function (d, i) {
+        showTooltip(d, i, d3.event.pageX);
+      })
+      .on("touchstart", function (d, i) {
+        showTooltip(d, i, d3.event.touches[0].pageX);
+      })
+      .on("touchmove", function (d, i) {
+        let left = d3.event.touches[0].pageX;
+        let bars = $(".leg-bar");
+        let index = bars.toArray().findIndex(function (x) {
+          let l = $(x).position().left;
+          let r = l + $(x).width();
+          return left > l && left < r;
+        });
+        showTooltip(points[index], index, d3.event.touches[0].pageX);
+      });
+
+    function showTooltip(d, i, left) {
+      if (d) {
+        $("#legBarTooltip").show();
+        let n = points[i + 1];
+        let t = formatN(d.toFixed());
+        if (n) t += ` - ${formatN(n.toFixed())}`;
+        else t = `> ${t}`;
+        $("#legBarTooltip .lbt_text").html(t);
+        let w = $("#legBarTooltip").width();
+        let afterLeft = w / 2;
+        if (left - w / 2 < 5) {
+          afterLeft = left;
+          left = w / 2 + 5;
+        }
+        $("#legBarTooltip").css({ left });
+        $("#legBarTooltip .after").css({ left: afterLeft });
+      }
+    }
 
     svg
-      .append("text")
-      .text(function () {
-        return formatN(maxCases);
-      })
-      .style("font-size", "14px")
-      .attr("fill", "white")
-      .style("text-align", "right")
-      .attr("y", height - 5)
-      .attr("x", width - 55);
-    if (windowO === "landscape") {
-      $("#COVID_legend_container").append(
-        `<div id="toggleTopLeg"><div style="transform:rotate(${
-          topLegHidden ? 180 : 0
-        }deg);"><i class="fa fa-angle-double-up"></i></div></div>`
-      );
-      $("#toggleTopLeg").click(function () {
-        $(".radios").slideToggle();
-        $("#COVID_leg_details").slideToggle();
-        topLegHidden = !topLegHidden;
-        $("#toggleTopLeg > div").css({
-          transform: `rotate(${topLegHidden ? 180 : 0}deg)`,
-        });
+      .append("g")
+      .selectAll("bars")
+      .data(points)
+      .enter()
+      .append("rect")
+      .attr("y", 0)
+      .attr("x", (d, i) => i * barWidth - 0.5)
+      .attr("width", 1)
+      .attr("height", barHeight)
+      .attr("fill", "rgba(255,255,255,0.4)");
+
+    // if (windowO) {
+    $("#COVID_legend_container").append(
+      `<div id="toggleTopLeg"><div style="transform:rotate(${
+        topLegHidden ? 180 : 0
+      }deg);"><i class="fa fa-angle-double-up"></i></div></div>`
+    );
+    $("#toggleTopLeg").click(function () {
+      $(".radios").slideToggle();
+      $("#COVID_leg_details").slideToggle();
+      topLegHidden = !topLegHidden;
+      $("#toggleTopLeg > div").css({
+        transform: `rotate(${topLegHidden ? 180 : 0}deg)`,
       });
-    }
-    $("#COVID_legend_container").append(`<div class="list"></div>`);
+    });
+    // }
+    $("#COVID_legend_container").append(
+      `<div ${
+        windowO ? 'style="margin-right:0px;"' : ""
+      } class="list list-header"></div><div class="list list-body"></div>`
+    );
     let arrow = sortMethod.direction === "dsc" ? "↓" : "↑";
-    $(`.list`).append(`
+    $(`.list-header`).append(`
   <div style="background:rgba(255,255,255,0.2); border-bottom:solid 1px; font-weight:bold;">
   <div></div>
   <div id="sortAlpha">${covType} ${
       sortMethod.method === "alpha" ? arrow : ""
     }</div>
-  <div id="sortCases">Cases ${sortMethod.method === "cases" ? arrow : ""}</div>
+  <div id="sortCases">${selectedDataKey} ${
+      sortMethod.method === "cases" ? arrow : ""
+    }</div>
   </div>
   `);
     $("#sortAlpha").click(function () {
@@ -1410,37 +1545,50 @@ function init(token) {
           return {
             id: k,
             name: COVID19.countries[k].country,
-            value: COVID19.countries[k].cases,
+            value: COVID19.countries[k][selectedDataKey],
           };
         });
         break;
       case "Countries_States":
         list = COVID19.JohnsHopkinsData.map((x, i) => {
-          return { id: `JHD_${i}`, name: x.name, value: x.stats.confirmed };
+          return {
+            id: `JHD_${i}`,
+            name: x.name,
+            value: x.stats[selectedDataKey],
+          };
         });
         break;
       case "USACounties":
-        list = COVID19.USACounties.map((x) => {
-          let conf = x.confirmed;
-          return {
-            id: conf.countyFIPS,
-            name: `${conf["County Name"]}, ${conf.State}`,
-            value: conf[viewingDate],
-          };
-        });
+        list = COVID19.USACounties.filter((x) => x[selectedDataKey]).map(
+          (x) => {
+            let conf = x[selectedDataKey];
+            return {
+              id: conf.countyFIPS,
+              name: `${conf["County Name"]}, ${conf.State}`,
+              value: conf[viewingDate],
+            };
+          }
+        );
         break;
       case "USAStates":
         list = [];
         COVID19.USACounties.forEach((c) => {
-          let cases = c.confirmed ? +c.confirmed[viewingDate] : 0;
-          // let deaths = c.deaths ? +c.deaths[viewingDate] : 0;
-          let sFIPS = c.confirmed.stateFIPS;
-          if (sFIPS.length === 1) sFIPS = `0${sFIPS}`;
-          let s = list.find((x) => x.id === sFIPS);
-          if (s) {
-            s.value += cases;
-          } else
-            list.push({ id: sFIPS, name: c.confirmed.State, value: cases });
+          let k = c[selectedDataKey];
+          if (k) {
+            let cases = +k[viewingDate];
+            // let deaths = c.deaths ? +c.deaths[viewingDate] : 0;
+            let sFIPS = c[selectedDataKey].stateFIPS;
+            if (sFIPS.length === 1) sFIPS = `0${sFIPS}`;
+            let s = list.find((x) => x.id === sFIPS);
+            if (s) {
+              s.value += cases;
+            } else
+              list.push({
+                id: sFIPS,
+                name: c[selectedDataKey].State,
+                value: cases,
+              });
+          }
         });
         break;
     }
@@ -1466,12 +1614,12 @@ function init(token) {
       }
     });
     list.forEach((x, i) => {
-      $(`.list`).append(
+      $(`.list-body`).append(
         `<div id=${x.id}><div>${i + 1}</div><div>${x.name}</div><div>${formatN(
           x.value
         )}</div></div>`
       );
-      $(`.list > #${x.id}`).click(function () {
+      $(`.list-body > #${x.id}`).click(function () {
         let e,
           ds = dataSources[covType];
         if (!ds) return;
@@ -1482,9 +1630,9 @@ function init(token) {
             return e.id.split("_")[0] === x.id;
           });
         }
-        selectEntity(e);
+        if (e[0]) selectEntity(e);
       });
-      $(`.list > #${x.id}`).on("mouseover", function () {
+      $(`.list-body > #${x.id}`).on("mouseover", function () {
         let e,
           ds = dataSources[covType];
         if (!ds) return;
@@ -1495,10 +1643,10 @@ function init(token) {
             return e.id.split("_")[0] === x.id;
           });
         }
-        hoverEntity(e);
+        if (e[0]) hoverEntity(e);
       });
 
-      $(`.list > #${x.id}`).on("mouseout", function () {
+      $(`.list-body > #${x.id}`).on("mouseout", function () {
         if (!selectedEntity) $("#customInfoBox").hide();
       });
     });
