@@ -230,6 +230,11 @@ body {
 #COVID_legend_container .list-header {
   margin-right: 10px;
 }
+#COVID_legend_container .list-header > div {
+  overflow: hidden;
+  white-space: nowrap;
+  line-height: 1;
+}
 #COVID_legend_container .list > div {
   display: grid;
   grid-template-columns: 10% 60% 30%;
@@ -298,8 +303,8 @@ body {
 #toggleTotals > div,
 #toggleTopLeg > div {
   position: absolute;
-  right: 4px;
-  top: -20px;
+  right: 6px;
+  top: -24px;
   font-size: 20px;
 }
 
@@ -522,5 +527,21 @@ input[type="range"]:focus {
   left: 50%;
   transform: translate(-50%, 0);
   font-size: 16px;
-  font-weight: bold;;
+  font-weight: bold;
+}
+#selectDataKey select {
+  background: none;
+  color: white;
+  border: none;
+  border-bottom: solid 1px;
+  font-size: 16px;
+  text-align: center;
+  cursor: pointer;
+}
+#selectDataKey select:hover {
+  font-style: italic;
+}
+#selectDataKey select option {
+  color: black;
+  font-style: normal;
 }

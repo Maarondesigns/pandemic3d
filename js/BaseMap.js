@@ -16,7 +16,7 @@ function init(token) {
       USACounties: "data/USA_counties_20m.json",
       USAStates: "data/USA_states_20m.json",
     },
-    heightMultiplier = 1,
+    heightMultiplier = 3,
     heightMultipliers = {
       Countries: 1000000,
       Countries_States: 1000000,
@@ -24,7 +24,7 @@ function init(token) {
       USAStates: 100000,
     },
     dataKeys,
-    selectedDataKey,
+    selectedDataKey = "casesPerOneMillion",
     viewingDate,
     dateAnimation = false,
     dateAnimationInterval,
@@ -37,8 +37,8 @@ function init(token) {
     USAStatesEntities,
     selectedEntity,
     colorFunction,
-    scale = "log",
-    extrudeHeights = false,
+    scale = "linear",
+    extrudeHeights = true,
     allCases,
     minCases,
     maxCases,
@@ -119,6 +119,7 @@ function init(token) {
 
   let viewer = new Cesium.Viewer("cesiumContainer", {
     // scene3DOnly: true,
+    geocoder: false,
     selectionIndicator: false,
     homeButton: true,
     sceneModePicker: true,
@@ -452,7 +453,8 @@ function init(token) {
                 if (detectWindowOrientation() === "portrait") {
                   setTimeout(() => {
                     toggleLegend();
-                  }, 1000);
+                    toggleTotals();
+                  }, 1500);
                 }
               })
               .catch((error) => console.log("error", error));
@@ -492,6 +494,25 @@ function init(token) {
     });
   }
 
+  function toggleTotals() {
+    $(".total_details").slideToggle();
+    totalsHidden = !totalsHidden;
+    $("#toggleTotals > div").css({
+      transform: `rotate(${totalsHidden ? 0 : 180}deg)`,
+    });
+    let vdsc = $("#viewingDateSliderContainer");
+    if (vdsc[0]) {
+      let interval = setInterval(() => {
+        vdsc.css({
+          bottom: `${$("#totals").height() + 25}px`,
+        });
+      }, 15);
+      setTimeout(() => {
+        clearInterval(interval);
+      }, 500);
+    }
+  }
+
   function initTotals() {
     let { totals } = COVID19;
     let { updated, cases, active, deaths, recovered, critical } = totals;
@@ -513,22 +534,7 @@ function init(token) {
         }deg);"><i class="fa fa-angle-double-up"></i></div></div>`
       );
       $("#toggleTotals").click(function () {
-        $(".total_details").slideToggle();
-        totalsHidden = !totalsHidden;
-        $("#toggleTotals > div").css({
-          transform: `rotate(${totalsHidden ? 0 : 180}deg)`,
-        });
-        let vdsc = $("#viewingDateSliderContainer");
-        if (vdsc[0]) {
-          let interval = setInterval(() => {
-            vdsc.css({
-              bottom: `${$("#totals").height() + 25}px`,
-            });
-          }, 15);
-          setTimeout(() => {
-            clearInterval(interval);
-          }, 500);
-        }
+        toggleTotals();
       });
     }
     t.append(
@@ -905,41 +911,77 @@ function init(token) {
         case "Countries":
           let {
             cases,
+            casesPerOneMillion,
             deaths,
+            deathsPerOneMillion,
             active,
+            activePerOneMillion,
             recovered,
+            recoveredPerOneMillion,
             critical,
+            criticalPerOneMillion,
             todayCases,
             todayDeaths,
-            casesPerOneMillion,
-            deathsPerOneMillion,
             tests,
             testsPerOneMillion,
           } = covid;
           let mob = Math.min(window.innerWidth, window.innerHeight) < 450;
+          function ss(k) {
+            if (selectedDataKey === k)
+              return `style="font-weight:bold;text-decoration:underline;"`;
+            else return "";
+          }
           e.description = `
             <div>
                 <div style="font-weight:bold;text-decoration:underline;">Total</div>
                 <div style="margin-left:10px;">
-                    <div>Cases: ${formatN(cases)} (${formatN(
+                    <div>
+                      <span ${ss("cases")}>Cases: ${formatN(cases)}</span>
+                      <span ${ss("casesPerOneMillion")}> (${formatN(
             casesPerOneMillion
-          )} per ${mob ? "M" : "million"})</div>
-                    <div>Deaths: ${formatN(deaths)} (${formatN(
+          )} per ${mob ? "M" : "million"})</span>
+                    </div>
+                    <div>
+                      <span ${ss("deaths")}>Deaths: ${formatN(deaths)}</span>
+                      <span ${ss("deathsPerOneMillion")}>(${formatN(
             deathsPerOneMillion
-          )} per ${mob ? "M" : "million"})</div>
-                    <div>Active: ${formatN(active)}</div>
-                    <div>Recovered: ${formatN(recovered)}</div>
-                    <div>Critical: ${formatN(critical)}</div>
-                    <div>Tests: ${formatN(tests)} (${formatN(
+          )} per ${mob ? "M" : "million"})</span>
+                    </div>
+                    <div>
+                    <span ${ss("active")}>Active: ${formatN(active)}</span>
+                    <span ${ss("activePerOneMillion")}> (${formatN(
+            activePerOneMillion
+          )} per ${mob ? "M" : "million"})</span>
+                    </div>
+                    <div>
+                    <span ${ss("recovered")}>Recovered: ${formatN(
+            recovered
+          )}</span>
+                    <span ${ss("recoveredPerOneMillion")}> (${formatN(
+            recoveredPerOneMillion
+          )} per ${mob ? "M" : "million"})</span>
+                    </div>
+                    <div>
+                    <span ${ss("critical")}>Critical: ${formatN(
+            critical
+          )}</span>
+                    <span ${ss("criticalPerOneMillion")}> (${formatN(
+            criticalPerOneMillion
+          )} per ${mob ? "M" : "million"})</span>
+                    </div>
+                    <div>
+                    <span ${ss("tests")}>Tests: ${formatN(tests)}</span>
+                    <span ${ss("testsPerOneMillion")}> (${formatN(
             testsPerOneMillion
-          )} per ${mob ? "M" : "million"})</div>
+          )} per ${mob ? "M" : "million"})</span>
+                    </div>
                 </div>
             </div>
             <div>
                 <div style="font-weight:bold;text-decoration:underline;">Today</div>
                 <div style="margin-left:10px;">
-                    <div>Cases: ${formatN(todayCases)}</div>
-                    <div>Deaths: ${formatN(todayDeaths)}</div>
+                    <div ${ss("todayCases")}>Cases: ${formatN(todayCases)}</div>
+                    <div ${ss("todayDeaths")}>Deaths: ${formatN(todayDeaths)}</div>
                 </div>
             </div>
             `;
@@ -1208,6 +1250,17 @@ function init(token) {
     }
   }
 
+  function formatDataKeyWords(k) {
+    let string = k.replace(/([a-z](?=[A-Z]))/g, "$1 ");
+    return string.charAt(0).toUpperCase() + string.slice(1);
+  }
+
+  function formatDataKeyShort(k) {
+    let string = formatDataKeyWords(k);
+    if (string.includes("Million")) string = string.split(" ")[0] + "/M";
+    return string;
+  }
+
   function drawLegend() {
     $("#COVID_legend_container").remove();
     $("#selectDataKey").remove();
@@ -1218,7 +1271,7 @@ function init(token) {
         (x) =>
           `<option value=${x} ${
             selectedDataKey === x ? "selected" : ""
-          }>${x}</option>`
+          }>${formatDataKeyWords(x)}</option>`
       )}</select>
       </div>`
     );
@@ -1508,13 +1561,16 @@ function init(token) {
       } class="list list-header"></div><div class="list list-body"></div>`
     );
     let arrow = sortMethod.direction === "dsc" ? "↓" : "↑";
+    let formatSDK = formatDataKeyShort(selectedDataKey);
     $(`.list-header`).append(`
   <div style="background:rgba(255,255,255,0.2); border-bottom:solid 1px; font-weight:bold;">
   <div></div>
   <div id="sortAlpha">${covType} ${
       sortMethod.method === "alpha" ? arrow : ""
     }</div>
-  <div id="sortCases">${selectedDataKey} ${
+  <div ${
+    formatSDK.length > 10 ? 'style="font-size: 14px; font-weight:regular;"' : ""
+  } id="sortCases">${formatSDK} ${
       sortMethod.method === "cases" ? arrow : ""
     }</div>
   </div>
