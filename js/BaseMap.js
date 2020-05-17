@@ -453,8 +453,10 @@ function init(token) {
                 if (detectWindowOrientation() === "portrait") {
                   setTimeout(() => {
                     toggleLegend();
-                    toggleTotals();
                   }, 1500);
+                  setTimeout(() => {
+                    toggleTotals();
+                  }, 2500);
                 }
               })
               .catch((error) => console.log("error", error));
@@ -981,7 +983,9 @@ function init(token) {
                 <div style="font-weight:bold;text-decoration:underline;">Today</div>
                 <div style="margin-left:10px;">
                     <div ${ss("todayCases")}>Cases: ${formatN(todayCases)}</div>
-                    <div ${ss("todayDeaths")}>Deaths: ${formatN(todayDeaths)}</div>
+                    <div ${ss("todayDeaths")}>Deaths: ${formatN(
+            todayDeaths
+          )}</div>
                 </div>
             </div>
             `;
@@ -1490,13 +1494,16 @@ function init(token) {
         $("#legBarTooltip").hide();
       })
       .on("mouseover", function (d, i) {
-        showTooltip(d, i, d3.event.pageX);
+        let { pageX, pageY } = d3.event;
+        showTooltip(d, i, pageX, pageY);
       })
       .on("mousemove", function (d, i) {
-        showTooltip(d, i, d3.event.pageX);
+        let { pageX, pageY } = d3.event;
+        showTooltip(d, i, pageX, pageY);
       })
       .on("touchstart", function (d, i) {
-        showTooltip(d, i, d3.event.touches[0].pageX);
+        let { pageX, pageY } = d3.event.touches[0];
+        showTooltip(d, i, pageX, pageY);
       })
       .on("touchmove", function (d, i) {
         let left = d3.event.touches[0].pageX;
@@ -1506,10 +1513,11 @@ function init(token) {
           let r = l + $(x).width();
           return left > l && left < r;
         });
-        showTooltip(points[index], index, d3.event.touches[0].pageX);
+        let { pageX, pageY } = d3.event.touches[0];
+        showTooltip(points[index], index, pageX, pageY);
       });
 
-    function showTooltip(d, i, left) {
+    function showTooltip(d, i, left, top) {
       if (d) {
         $("#legBarTooltip").show();
         let n = points[i + 1];
@@ -1523,7 +1531,7 @@ function init(token) {
           afterLeft = left;
           left = w / 2 + 5;
         }
-        $("#legBarTooltip").css({ left });
+        $("#legBarTooltip").css({ left, top });
         $("#legBarTooltip .after").css({ left: afterLeft });
       }
     }

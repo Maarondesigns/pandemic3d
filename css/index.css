@@ -503,8 +503,8 @@ input[type="range"]:focus {
   padding: 5px;
   background: rgba(27, 33, 46, 0.9);
   z-index: 1;
-  top: 175px;
-  transform: translate(-50%, 0px);
+  /* top: 175px; */
+  transform: translate(-50%, -180%);
   border: solid 1px lightgray;
   white-space: nowrap;
 }
