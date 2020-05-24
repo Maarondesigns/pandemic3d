@@ -16,6 +16,7 @@ function init(token) {
       USACounties: "data/USA_counties_20m.json",
       USAStates: "data/USA_states_20m.json",
     },
+    entityOpacity = 0.6,
     heightMultiplier = 3,
     heightMultipliers = {
       Countries: 1000000,
@@ -24,7 +25,7 @@ function init(token) {
       USAStates: 100000,
     },
     dataKeys,
-    selectedDataKey = "casesPerOneMillion",
+    selectedDataKey = "testsPerOneMillion",
     viewingDate,
     dateAnimation = false,
     dateAnimationInterval,
@@ -632,32 +633,42 @@ function init(token) {
     viewer.dataSources.add(dataSources[covType]);
     Cesium.GeoJsonDataSource.load(land).then(function (dataSource) {
       let entities = dataSource.entities.values;
-      entities.forEach((e, ei) => {
-        e.polygon.arcType = Cesium.ArcType.GEODESIC;
-        e.polygon.height = undefined;
-        e.disableDepthTestDistance = Number.POSITIVE_INFINITY;
-        e.polygon.outline = false;
-        let id = generateID(e);
-        let data = getData(id);
-        setColor(e, data);
-        setDescription(e, data);
-        e.data = data;
-        let outlineMaterial = Cesium.Color.WHITE.withAlpha(
-          data && data[[selectedDataKey]] ? 0.5 : 0.1
-        );
-        e.polyline = new Cesium.PolylineGraphics({
-          positions: e.polygon.hierarchy._value.positions,
-          material: outlineMaterial,
-          width: 1,
-          eyeOffset: new Cesium.Cartesian3(0, 0, -6000),
+      entities
+        .map((x) => {
+          let id = generateID(x);
+          let data = getData(id);
+          return { e: x, id, data };
+        })
+        .sort((a, b) => {
+          let ad = a.data ? a.data[selectedDataKey] : 0;
+          let bd = b.data ? b.data[selectedDataKey] : 0;
+          return bd - ad;
+        })
+        .forEach((x) => {
+          let { e, id, data } = x;
+          e.polygon.arcType = Cesium.ArcType.GEODESIC;
+          e.polygon.height = undefined;
+          e.disableDepthTestDistance = Number.POSITIVE_INFINITY;
+          e.polygon.outline = false;
+          setColor(e, data);
+          setDescription(e, data);
+          e.data = data;
+          let outlineMaterial = Cesium.Color.WHITE.withAlpha(
+            data && data[[selectedDataKey]] ? 0.5 : 0.1
+          );
+          e.polyline = new Cesium.PolylineGraphics({
+            positions: e.polygon.hierarchy._value.positions,
+            material: outlineMaterial,
+            width: 1,
+            eyeOffset: new Cesium.Cartesian3(0, 0, -6000),
+          });
+          let count = dataSources[covType].entities.values.filter(
+            (x) => x.id.split("_")[0] == id
+          ).length;
+          id = `${id}_${count}`;
+          e["_id"] = id;
+          dataSources[covType].entities.add(e);
         });
-        let count = dataSources[covType].entities.values.filter(
-          (x) => x.id.split("_")[0] == id
-        ).length;
-        id = `${id}_${count}`;
-        e["_id"] = id;
-        dataSources[covType].entities.add(e);
-      });
     });
   }
 
@@ -671,6 +682,8 @@ function init(token) {
         );
         if (county) {
           let obj = JSON.parse(JSON.stringify(county));
+          obj["County Name"] = county.confirmed["County Name"];
+          obj["State"] = county.confirmed["State"];
           obj.confirmed = +county.confirmed[viewingDate];
           obj.deaths = +county.deaths[viewingDate];
           return obj;
@@ -991,7 +1004,7 @@ function init(token) {
             `;
           break;
         case "USACounties":
-          e.name = `${covid.confirmed["County Name"]}, ${covid.confirmed.State}`;
+          e.name = `${covid["County Name"]}, ${covid.State}`;
           e.description = `<div style="display:block;"><div style="font-weight:bold;">As of ${viewingDate}</div><div>Confirmed: ${formatN(
             covid.confirmed
           )}</div><div>Deaths: ${formatN(covid.deaths)}</div></div>`;
@@ -1038,11 +1051,16 @@ function init(token) {
       let noLocation = [];
       COVID19.JohnsHopkinsData.forEach((d, i) => {
         if (!d.coordinates.latitude || !d.coordinates.longitude) {
-          if (d.name === "Northern Mariana Islands, US") {
+          if (!d.stats.confirmed && !d.stats.deaths) {
+            return;
+          } else if (d.name === "Northern Mariana Islands, US") {
             d.coordinates = { latitude: 15.08635, longitude: 145.686101 };
           } else {
             noLocation.push(d);
-            d.coordinates = { latitude: 0, longitude: -noLocation.length };
+            d.coordinates = {
+              latitude: -noLocation.length * 2 + 30,
+              longitude: -40,
+            };
           }
         }
         let r;
@@ -1062,16 +1080,22 @@ function init(token) {
             semiMinorAxis: r,
             semiMajorAxis: r,
             height: 0,
-            extrudedHeight: radius * 2000,
-            material: new Cesium.Color(c[0], c[1], c[2]).withAlpha(0.5),
+            extrudedHeight: radius * 2000 * heightMultiplier,
+            material: new Cesium.Color(c[0], c[1], c[2]).withAlpha(
+              entityOpacity
+            ),
             outline: true,
-            outlineColor: new Cesium.Color(c[0], c[1], c[2]).withAlpha(1),
+            outlineColor: new Cesium.Color(c[0], c[1], c[2]).withAlpha(
+              entityOpacity + 0.2
+            ),
           };
         } else {
           point = new Cesium.PointGraphics({
             pixelSize: radius,
-            color: new Cesium.Color(c[0], c[1], c[2]).withAlpha(0.4),
-            outlineColor: new Cesium.Color(c[0], c[1], c[2]).withAlpha(0.8),
+            color: new Cesium.Color(c[0], c[1], c[2]).withAlpha(entityOpacity),
+            outlineColor: new Cesium.Color(c[0], c[1], c[2]).withAlpha(
+              entityOpacity + 0.2
+            ),
             outlineWidth: 2,
           });
         }
@@ -1084,9 +1108,9 @@ function init(token) {
           ),
           name,
           description: `<div>
-                        <div>Confirmed: ${d.stats.confirmed}</div>
-                        <div>Deaths: ${d.stats.deaths}</div>
-                        <div>Recovered: ${d.stats.recovered}</div>
+                        <div>Confirmed:</div><div style="margin-left:10px;">${d.stats.confirmed}</div>
+                        <div>Deaths:</div><div style="margin-left:10px;">${d.stats.deaths}</div>
+                        <div>Recovered:</div><div style="margin-left:10px;">${d.stats.recovered}</div>
                         </div>`,
           point,
           ellipse,
@@ -1095,117 +1119,14 @@ function init(token) {
     }
   }
 
-  // function drawUSAStates() {
-  //   if (USAStatesEntities) {
-  //     USAStatesEntities.entities.removeAll();
-  //     viewer.dataSources.remove(USAStatesEntities);
-  //     USAStatesEntities = undefined;
-  //   }
-  //   if (globeData.USAStates) {
-  //     loadEntities(globeData.USAStates);
-  //   } else {
-  //     d3.json("data/USA_states_20m.json").then((land) => {
-  //       globeData.USAStates = land;
-  //       findCentroids(land);
-  //       loadEntities(land);
-  //     });
-  //   }
-
-  //   function loadEntities(land) {
-  //     USAStatesEntities = new Cesium.CustomDataSource("USACountiesEntities");
-  //     viewer.dataSources.add(USAStatesEntities);
-  //     Cesium.GeoJsonDataSource.load(land).then(function (dataSource) {
-  //       let entities = dataSource.entities.values;
-  //       entities.forEach((e) => {
-  //         e.polygon.arcType = Cesium.ArcType.GEODESIC;
-  //         e.polygon.height = undefined;
-  //         e.disableDepthTestDistance = Number.POSITIVE_INFINITY;
-  //         e.polygon.material = new Cesium.Color(
-  //           Math.random(),
-  //           Math.random(),
-  //           Math.random()
-  //         );
-  //         let outlineMaterial = Cesium.Color.WHITE.withAlpha(0.3);
-  //         e.polygon.outline = false;
-  //         e.polyline = new Cesium.PolylineGraphics({
-  //           positions: e.polygon.hierarchy._value.positions,
-  //           material: outlineMaterial,
-  //           width: 1,
-  //           eyeOffset: new Cesium.Cartesian3(0, 0, -6000),
-  //         });
-  //         USAStatesEntities.entities.add(e);
-  //       });
-  //     });
-  //   }
-  // }
-
-  // function drawUSACounties() {
-  //   if (USACountiesEntities) {
-  //     USACountiesEntities.entities.removeAll();
-  //     viewer.dataSources.remove(USACountiesEntities);
-  //     USACountiesEntities = undefined;
-  //   }
-
-  //   if (globeData.USACounties) {
-  //     loadEntities(globeData.USACounties);
-  //   } else {
-  //     d3.json("data/USA_counties_20m.json").then((land) => {
-  //       globeData.USACounties = land;
-  //       findCentroids(land);
-  //       loadEntities(land);
-  //     });
-  //   }
-
-  //   function loadEntities(land) {
-  //     USACountiesEntities = new Cesium.CustomDataSource("USACountiesEntities");
-  //     viewer.dataSources.add(USACountiesEntities);
-  //     Cesium.GeoJsonDataSource.load(land).then(function (dataSource) {
-  //       let entities = dataSource.entities.values;
-  //       entities.forEach((e) => {
-  //         let { FIPS } = e.properties;
-  //         FIPS = FIPS.getValue();
-  //         let county = COVID19.USACounties.find(
-  //           (x) => +x.confirmed.countyFIPS === +FIPS
-  //         );
-  //         let conf = county ? +county.confirmed[viewingDate] : 0;
-  //         let deaths = county ? +county.deaths[viewingDate] : 0;
-  //         if (county && (conf || deaths)) {
-  //           // e["_id"] = FIPS;
-  //           e.fips = +FIPS;
-  //           e.name = `${county.confirmed["County Name"]}, ${county.confirmed.State}`;
-  //           e.description = `<div style="display:block;"><div style="font-weight:bold;">As of ${viewingDate}</div><div>Confirmed: ${formatN(
-  //             conf
-  //           )}</div><div>Deaths: ${formatN(deaths)}</div></div>`;
-
-  //           e.polygon.arcType = Cesium.ArcType.GEODESIC;
-  //           e.polygon.height = undefined;
-  //           e.disableDepthTestDistance = Number.POSITIVE_INFINITY;
-  //           setColor(e, { cases: conf });
-  //           // e.polygon.material = new Cesium.Color(0.5, 0.5, 0.5).withAlpha(0.7);
-  //           let outlineMaterial = Cesium.Color.WHITE.withAlpha(0.3);
-  //           e.polygon.outline = false;
-  //           // e.polygon.outlineColor = outlineMaterial;
-  //           e.polyline = new Cesium.PolylineGraphics({
-  //             positions: e.polygon.hierarchy._value.positions,
-  //             material: outlineMaterial,
-  //             width: 1,
-  //             eyeOffset: new Cesium.Cartesian3(0, 0, -6000),
-  //           });
-  //           USACountiesEntities.entities.add(e);
-  //         }
-  //       });
-  //     });
-  //   }
-  // }
-
   function setColor(e, covid) {
     let c = covid ? covid[selectedDataKey] : 0;
     if (c) {
       let rgb = colorFunction(c);
-      let material = stringToCesiumColor(
-        rgb,
-        extrudeHeights ? 1 : scene.mode === Cesium.SceneMode.SCENE3D ? 0.7 : 0.9
-      );
+      // let material = Cesium.Color.fromRandom({
+      //   alpha: entityOpacity,
+      // })
+      let material = stringToCesiumColor(rgb, entityOpacity);
       if (e.polygon) {
         e.polygon.material = material;
         let h = 0;
@@ -1353,6 +1274,10 @@ function init(token) {
         <input style="display:${
           extrudeHeights ? "" : "none"
         };width: 80%;margin-left: 6px;" type="range" id="heightSlider" name="heightSlider" min="0.1" max="4" step="0.1" value="${heightMultiplier}"/>
+        <label>Opacity</label>
+        <input style="display:${
+          entityOpacity ? "" : "none"
+        };width: 80%;margin-left: 6px;" type="range" id="opacitySlider" name="opacitySlider" min="0.1" max="1" step="0.1" value="${entityOpacity}"/>
         </div>
         </div>
         </div>`);
@@ -1371,6 +1296,10 @@ function init(token) {
     });
     $("#heightSlider").on("change", function () {
       heightMultiplier = this.value;
+      updateMap(true);
+    });
+    $("#opacitySlider").on("change", function () {
+      entityOpacity = +this.value;
       updateMap(true);
     });
 

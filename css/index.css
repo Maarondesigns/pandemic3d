@@ -27,6 +27,9 @@ body {
 .backdrop {
   background: rgba(27, 33, 46, 0.9);
 }
+.cesium-viewer-fullscreenContainer {
+  z-index: 8;
+}
 .cesium-viewer-toolbar {
   top: 10px;
   z-index: 8;
@@ -45,7 +48,7 @@ body {
 
 #totals {
   position: absolute;
-  top: 0;
+  bottom: 0;
   left: 50%;
   transform: translate(-50%, 0);
   z-index: 7;
@@ -273,10 +276,6 @@ body {
   .total_details {
     display: grid;
     grid-template-columns: 1fr 1fr;
-  }
-  #totals {
-    top: unset;
-    bottom: 0;
   }
 }
 
@@ -523,18 +522,19 @@ input[type="range"]:focus {
 
 #selectDataKey {
   position: absolute;
-  top: 10%;
+  top: 2%;
   left: 50%;
   transform: translate(-50%, 0);
-  font-size: 16px;
   font-weight: bold;
 }
 #selectDataKey select {
-  background: none;
+  background: rgba(0, 0, 0, 0.4);
   color: white;
   border: none;
-  border-bottom: solid 1px;
-  font-size: 16px;
+  border-radius: 4px;
+  padding: 5px;
+  box-shadow: 0 1px 4px 1px rgba(255, 255, 255, 0.5);
+  font-size: 18px;
   text-align: center;
   cursor: pointer;
 }
@@ -542,6 +542,7 @@ input[type="range"]:focus {
   font-style: italic;
 }
 #selectDataKey select option {
+  background: white;
   color: black;
   font-style: normal;
 }
