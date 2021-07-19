@@ -522,21 +522,21 @@ input[type="range"]:focus {
 
 #selectDataKey {
   position: absolute;
-  top: 2%;
-  left: 50%;
-  transform: translate(-50%, 0);
+  top: 12px;
+  left: 12px;
   font-weight: bold;
+  width: calc(100% - 136px);
 }
 #selectDataKey select {
-  background: rgba(0, 0, 0, 0.4);
+  background: #303336;
   color: white;
-  border: none;
+  border: 1px solid #444;
   border-radius: 4px;
-  padding: 5px;
-  box-shadow: 0 1px 4px 1px rgba(255, 255, 255, 0.5);
-  font-size: 18px;
+  padding: 4px;
+  font-size: 17px;
   text-align: center;
   cursor: pointer;
+  width: 100%;
 }
 #selectDataKey select:hover {
   font-style: italic;

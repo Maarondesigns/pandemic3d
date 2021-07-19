@@ -25,7 +25,7 @@ function init(token) {
       USAStates: 100000,
     },
     dataKeys,
-    selectedDataKey = "testsPerOneMillion",
+    selectedDataKey,
     viewingDate,
     dateAnimation = false,
     dateAnimationInterval,
@@ -694,7 +694,7 @@ function init(token) {
         COVID19.USACounties.forEach((c) => {
           let confirmed = c.confirmed ? +c.confirmed[viewingDate] : 0;
           let deaths = c.deaths ? +c.deaths[viewingDate] : 0;
-          let sFIPS = c.confirmed.stateFIPS;
+          let sFIPS = c.confirmed.StateFIPS;
           if (sFIPS.length === 1) sFIPS = `0${sFIPS}`;
           let s = states[sFIPS];
           if (s) {
@@ -740,7 +740,10 @@ function init(token) {
           dataKeys = Object.keys(
             COVID19.countries[Object.keys(COVID19.countries)[0]]
           ).filter(
-            (x) => !/updated|country|countryInfo|population|continent/.test(x)
+            (x) =>
+              !/updated|country|countryInfo|population|continent|PerPeople/.test(
+                x
+              )
           );
           if (!selectedDataKey) selectedDataKey = dataKeys[0];
           if (JHDEntities) JHDEntities.entities.removeAll();
@@ -1047,7 +1050,8 @@ function init(token) {
       JHDEntities = new Cesium.CustomDataSource("JHDEntities");
       viewer.dataSources.add(JHDEntities);
       let screenSize = Math.min(window.innerWidth, window.innerHeight);
-      let ratio = screenSize / 3000;
+      let denom = extrudeHeights ? 20000 : 100000;
+      let ratio = screenSize / denom;
       let noLocation = [];
       COVID19.JohnsHopkinsData.forEach((d, i) => {
         if (!d.coordinates.latitude || !d.coordinates.longitude) {
@@ -1058,7 +1062,7 @@ function init(token) {
           } else {
             noLocation.push(d);
             d.coordinates = {
-              latitude: -noLocation.length * 2 + 30,
+              latitude: -noLocation.length + 30,
               longitude: -40,
             };
           }
@@ -1166,12 +1170,14 @@ function init(token) {
   }
 
   function setDateFormat(obj) {
-    let remove = ["countyFIPS", "County Name", "State", "stateFIPS"];
-    let s = Object.keys(obj).filter((x) => remove.indexOf(x) === -1)[0];
+    let remove = ["countyFIPS", "County Name", "State", "StateFIPS"];
+    let s = Object.keys(obj).filter(
+      (x) => !remove.find((r) => r.toLowerCase() == x.toLowerCase())
+    )[0];
     if (s) {
-      s = s.split("/");
-      let y = s[2];
-      dateFormat = `M/D/${y.length === 2 ? "YY" : "YYYY"}`;
+      if (s.includes("/"))
+        dateFormat = `M-D-${s.split("/")[2].length === 2 ? "YY" : "YYYY"}`;
+      else if (s.includes("-")) dateFormat = `YYYY-MM-DD`;
     }
   }
 
@@ -1267,6 +1273,7 @@ function init(token) {
         </div>
         <div class="radios" ${topLegHidden ? 'style="display:none;"' : ""}>
         <div>
+        <div>
         <input type="checkbox" id="extrudeHeights" name="extrudeHeights" ${
           extrudeHeights ? "checked" : ""
         }>
@@ -1274,10 +1281,13 @@ function init(token) {
         <input style="display:${
           extrudeHeights ? "" : "none"
         };width: 80%;margin-left: 6px;" type="range" id="heightSlider" name="heightSlider" min="0.1" max="4" step="0.1" value="${heightMultiplier}"/>
+        <div>
+        </div>
         <label>Opacity</label>
         <input style="display:${
           entityOpacity ? "" : "none"
         };width: 80%;margin-left: 6px;" type="range" id="opacitySlider" name="opacitySlider" min="0.1" max="1" step="0.1" value="${entityOpacity}"/>
+        </div>
         </div>
         </div>
         </div>`);
@@ -1570,7 +1580,7 @@ function init(token) {
           if (k) {
             let cases = +k[viewingDate];
             // let deaths = c.deaths ? +c.deaths[viewingDate] : 0;
-            let sFIPS = c[selectedDataKey].stateFIPS;
+            let sFIPS = c[selectedDataKey].StateFIPS;
             if (sFIPS.length === 1) sFIPS = `0${sFIPS}`;
             let s = list.find((x) => x.id === sFIPS);
             if (s) {
