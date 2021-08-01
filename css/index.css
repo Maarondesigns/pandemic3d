@@ -62,6 +62,14 @@ body {
 #totals > div {
   margin: 6px 0;
 }
+#totals > div:first-child {
+  font-weight: bold;
+  font-size:16px;
+}
+#totals > div:first-child > span {
+  font-size: 12px;
+  font-weight: normal;
+}
 .total_details {
   display: flex;
   justify-content: center;
@@ -305,6 +313,9 @@ body {
   right: 6px;
   top: -24px;
   font-size: 20px;
+}
+#toggleTotals > div {
+  right: 20px;
 }
 
 @media only screen and (max-width: 500px), (max-height: 500px) {

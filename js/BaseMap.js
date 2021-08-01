@@ -17,7 +17,7 @@ function init(token) {
       USAStates: "data/USA_states_20m.json",
     },
     entityOpacity = 0.6,
-    heightMultiplier = 3,
+    heightMultiplier = 1.5,
     heightMultipliers = {
       Countries: 1000000,
       Countries_States: 1000000,
@@ -25,7 +25,7 @@ function init(token) {
       USAStates: 100000,
     },
     dataKeys,
-    selectedDataKey,
+    selectedDataKey = "casesPerOneMillion",
     viewingDate,
     dateAnimation = false,
     dateAnimationInterval,
@@ -91,8 +91,7 @@ function init(token) {
     tooltip: "Esri Satellite",
     creationFunction: function () {
       return new Cesium.ArcGisMapServerImageryProvider({
-        url:
-          "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer",
+        url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer",
       });
     },
   });
@@ -102,8 +101,7 @@ function init(token) {
     tooltip: "Esri Street",
     creationFunction: function () {
       return new Cesium.ArcGisMapServerImageryProvider({
-        url:
-          "https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer",
+        url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer",
       });
     },
   });
@@ -523,7 +521,7 @@ function init(token) {
     let t = $("#totals");
     let aP = ((active / cases) * 100).toFixed(2);
     t.append(
-      `<div style="font-weight:bold;">Total Cases: ${formatN(
+      `<div>Total Cases: ${formatN(
         cases
       )} <span class="subtext">(Updated ${moment(
         updated
@@ -618,12 +616,12 @@ function init(token) {
     let land = globeData[covType];
     let path = pathNames[covType];
     if (land) {
-      loadEntities(land);
+      return loadEntities(land);
     } else {
-      d3.json(path).then((land) => {
+      return d3.json(path).then((land) => {
         globeData[covType] = land;
         findCentroids(land);
-        loadEntities(land);
+        return loadEntities(land);
       });
     }
   }
@@ -631,7 +629,7 @@ function init(token) {
   function loadEntities(land) {
     dataSources[covType] = new Cesium.CustomDataSource(covType);
     viewer.dataSources.add(dataSources[covType]);
-    Cesium.GeoJsonDataSource.load(land).then(function (dataSource) {
+    return Cesium.GeoJsonDataSource.load(land).then(function (dataSource) {
       let entities = dataSource.entities.values;
       entities
         .map((x) => {
@@ -734,7 +732,7 @@ function init(token) {
         viewer.dataSources.remove(ds);
         ds = undefined;
       });
-
+      let p = new Promise((res) => res());
       switch (covType) {
         case "Countries":
           dataKeys = Object.keys(
@@ -753,14 +751,14 @@ function init(token) {
           minCases = Math.min(...allCases);
           maxCases = Math.max(...allCases);
           setScales();
-          drawEntities();
+          p = drawEntities();
           $("#viewingDateSliderContainer").remove();
           break;
         case "Countries_States":
           dataKeys = Object.keys(COVID19.JohnsHopkinsData[0].stats);
           if (!selectedDataKey) selectedDataKey = dataKeys[0];
           $("#viewingDateSliderContainer").remove();
-          drawJHD();
+          p = drawJHD();
           break;
         case "USACounties":
           dataKeys = Object.keys(COVID19.USACounties[0]);
@@ -774,7 +772,7 @@ function init(token) {
             maxCases = Math.max(...allCases);
             setScales();
           }
-          drawEntities();
+          p = drawEntities();
           // drawUSACounties();
           if (!dontDrawSlider) drawDateSlider();
           break;
@@ -801,12 +799,12 @@ function init(token) {
             maxCases = Math.max(...allCases);
             setScales();
           }
-          drawEntities();
+          p = drawEntities();
           // drawUSAStates();
           if (!dontDrawSlider) drawDateSlider();
           break;
       }
-      res();
+      p.then(() => res());
     });
   }
 
@@ -1045,9 +1043,11 @@ function init(token) {
       JHDEntities.entities.removeAll();
       viewer.dataSources.remove(JHDEntities);
       JHDEntities = undefined;
+      dataSources[covType] = JHDEntities;
     }
     if (COVID19.JohnsHopkinsData) {
       JHDEntities = new Cesium.CustomDataSource("JHDEntities");
+      dataSources[covType] = JHDEntities;
       viewer.dataSources.add(JHDEntities);
       let screenSize = Math.min(window.innerWidth, window.innerHeight);
       let denom = extrudeHeights ? 20000 : 100000;
@@ -1121,6 +1121,7 @@ function init(token) {
         });
       });
     }
+    return new Promise((res) => res());
   }
 
   function setColor(e, covid) {
@@ -1379,14 +1380,14 @@ function init(token) {
 
     $("#COVID_leg_details").html("");
 
-    $("#COVID_leg_details").append(`<div id="COVID_leg_svg"></div>
-<button class="${
-      scale === "log" ? "confirmButton" : "noButton"
-    }" id="covid_logarithmic">Logarithmic</button>
-<button class="${
-      scale === "linear" ? "confirmButton" : "noButton"
-    }" id="covid_linear">Linear</button>
-</div>`);
+    $("#COVID_leg_details").append(`<div id="COVID_leg_svg"></div><div style="height:15px;"></div>`);
+    //     $("#COVID_leg_details").append(`<button class="${
+    //       scale === "log" ? "confirmButton" : "noButton"
+    //     }" id="covid_logarithmic">Logarithmic</button>
+    // <button class="${
+    //       scale === "linear" ? "confirmButton" : "noButton"
+    //     }" id="covid_linear">Linear</button>
+    // </div>`);
     $("#covid_logarithmic").click(function () {
       if (scale !== "log") {
         scale = "log";
@@ -1617,37 +1618,33 @@ function init(token) {
       }
     });
     list.forEach((x, i) => {
+      let noGeo,
+        e,
+        ds = dataSources[covType];
+      if (ds) {
+        if (covType === "Countries_States") {
+          e = ds.entities.values.filter((e) => e.id === x.id);
+        } else {
+          e = ds.entities.values.filter((e) => {
+            return e.id.split("_")[0] === x.id;
+          });
+        }
+        if (!e[0]) noGeo = true;
+      }
       $(`.list-body`).append(
-        `<div id=${x.id}><div>${i + 1}</div><div>${x.name}</div><div>${formatN(
-          x.value
-        )}</div></div>`
+        `<div id=${x.id} ${noGeo ? `style="color:gray;"` : ""}><div>${
+          i + 1
+        }</div><div>${x.name}</div><div>${formatN(x.value)}</div></div>`
       );
-      $(`.list-body > #${x.id}`).click(function () {
-        let e,
-          ds = dataSources[covType];
-        if (!ds) return;
-        if (covType === "Countries_States") {
-          e = ds.entities.values.find((e) => e.id === x.id);
-        } else {
-          e = ds.entities.values.filter((e) => {
-            return e.id.split("_")[0] === x.id;
-          });
-        }
-        if (e[0]) selectEntity(e);
-      });
-      $(`.list-body > #${x.id}`).on("mouseover", function () {
-        let e,
-          ds = dataSources[covType];
-        if (!ds) return;
-        if (covType === "Countries_States") {
-          e = ds.entities.values.find((e) => e.id === x.id);
-        } else {
-          e = ds.entities.values.filter((e) => {
-            return e.id.split("_")[0] === x.id;
-          });
-        }
-        if (e[0]) hoverEntity(e);
-      });
+
+      if (!noGeo) {
+        $(`.list-body > #${x.id}`).click(function () {
+          selectEntity(e);
+        });
+        $(`.list-body > #${x.id}`).on("mouseover", function () {
+          hoverEntity(e);
+        });
+      }
 
       $(`.list-body > #${x.id}`).on("mouseout", function () {
         if (!selectedEntity) $("#customInfoBox").hide();
@@ -1687,7 +1684,8 @@ function init(token) {
           centroid = centroid.getValue();
           position = new Cesium.Cartesian3.fromDegrees(
             centroid[0],
-            centroid[1]
+            centroid[1],
+            selectedEntity.polygon.extrudedHeight.getValue()
           );
         }
       }
